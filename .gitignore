@@ -1,0 +1,21 @@
+# 파이썬 가상환경·임시 파일
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# 비밀키 (키는 환경변수로만 넣는다)
+.env
+*.env
+*service-account*.json
+*serviceAccount*.json
+
+# 개인 Claude Code 설정 (에이전트 정의 .claude/agents/ 는 올린다)
+.claude/settings.local.json
+
+# OS·편집기 임시 파일
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

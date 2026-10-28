@@ -1,0 +1,79 @@
+﻿2026-10-28 16:16:59 START
+--- files (wc) ---
+00_알림.html lines=307 bytes=19657
+01_분야선택.html lines=399 bytes=23422
+02_뉴스목록.html lines=373 bytes=24799
+03_종합기사.html lines=458 bytes=37049
+04_설정.html lines=214 bytes=13365
+index.html lines=136 bytes=8686
+--- external refs (http/https/src=//) ---
+--- hook occurrences ---
+00_알림.html:237
+02_뉴스목록.html:203
+03_종합기사.html:211
+--- hook length ---
+24
+--- local .html link targets ---
+00_알림.html exists=True
+01_분야선택.html exists=True
+02_뉴스목록.html exists=True
+03_종합기사.html exists=True
+03_종합기사.html(id=hot1)·02_뉴스목록.html exists=False
+04_설정.html exists=True
+index.html exists=True
+--- tail -3 each ---
+[00_알림.html]
+</script>
+</body>
+</html>
+[01_분야선택.html]
+</script>
+</body>
+</html>
+[02_뉴스목록.html]
+</script>
+</body>
+</html>
+[03_종합기사.html]
+</script>
+</body>
+</html>
+[04_설정.html]
+</script>
+</body>
+</html>
+[index.html]
+</script>
+</body>
+</html>
+2026-10-28 16:16:59 END
+=== RE-RUN (after fixes) ===
+2026-10-28 16:22:20 START
+--- files (wc) ---
+00_알림.html lines=307 bytes=19678
+01_분야선택.html lines=399 bytes=23443
+02_뉴스목록.html lines=374 bytes=25065
+03_종합기사.html lines=459 bytes=37450
+04_설정.html lines=214 bytes=13386
+index.html lines=136 bytes=8686
+--- external refs (http/https/src=//) ---
+--- hook occurrences ---
+00_알림.html:237
+02_뉴스목록.html:203
+03_종합기사.html:211
+--- window.open / blob remaining ---
+--- local link targets (href / nbGo / u=) ---
+00_알림.html exists=True
+01_분야선택.html exists=True
+02_뉴스목록.html exists=True
+03_종합기사.html exists=True
+04_설정.html exists=True
+index.html exists=True
+--- 04 doc version/changelog ---
+04_화면설계서.md:6
+04_화면설계서.md:91
+04_화면설계서.md:491
+04_화면설계서.md:557
+04_화면설계서.md:559
+562
+2026-10-28 16:22:20 END

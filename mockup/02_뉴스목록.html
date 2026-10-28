@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S02 뉴스 목록 - 뉴스 봐 목업</title>
+<!--
+  뉴스 봐 목업 S02 뉴스 목록 (근거: docs/design/04_화면설계서.md v1.3 4장 S02, 5장 M1·M3~M6·M8, 7장)
+  - 자기완결형 단일 HTML. 외부 CDN·웹폰트 없음(시스템 글꼴).
+  - ✅ 확정값 반영(v1.2): Q5(왼쪽 앱 이름, 오른쪽 ⚙), Q7(첫 탭 = 오늘의 화제), Q9(배너는 탭 바로 아래 띠, 알림 배너가 위, 닫기 버튼 없음),
+    Q10(칸 = 어그로 한 줄 + 제목만, 회차 한 줄 표시), Q11(좌우 밀기로 탭 넘기기), Q12(불러오는 중 표시). 탭마다 칸 1~3개(03 v1.3).
+  - 칸마다 03_종합기사.html?id=… 로 자기 기사가 열림. 오늘의 화제 첫 칸(hot1)은 알림(00_알림.html)으로 온 기사와 같음.
+  - "다른 분야 한 줄"(추천 뉴스 탭 아래, FR-01-9)은 누르면 새 탭에 원문 기사(SYS-4 흉내)가 열림.
+  - 예시 기사·어그로 한 줄·언론사는 모두 지어낸 내용(실존 인물·실제 언론사 없음).
+  - 왼쪽 노란 점선 상자는 "목업 전용 컨트롤"로 실제 앱 화면이 아님. ?demo=1 이면 숨김(발표 모드).
+-->
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#FFFFFF; --surface:#F6F7F9; --line:#E4E7EC; --text:#14171C; --text2:#3E4450; --muted:#5B6270;
+  --accent:#1D4ED8; --accent-weak:#EEF3FE; --accent-line:#BFD0F8;
+  --warn-bg:#FFF4E0; --warn-text:#6B4100; --warn-line:#F2D49B; --err-text:#B42318;
+  --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+html,body{margin:0}
+body{background:#DDE1E7;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+button{font-family:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 16px 40px;flex-wrap:wrap}
+/* ---------- 목업 전용 컨트롤 (실제 앱 아님) ---------- */
+.mock{width:280px;flex:0 0 auto;background:#1F2329;color:#EDEFF3;border:2px dashed #F5B942;border-radius:14px;padding:16px;font-size:14px;line-height:1.5}
+.mock .badge{display:inline-block;background:#F5B942;color:#1F2329;font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+.mock h1{font-size:16px;margin:10px 0 2px}
+.mock p.sub{margin:0 0 4px;color:#B8BEC9;font-size:13px}
+.mock h2{font-size:13px;color:#F5B942;margin:16px 0 8px;font-weight:700}
+.mock .opts{display:flex;flex-direction:column;gap:6px}
+.mock button.opt{min-height:40px;text-align:left;padding:8px 12px;background:#2C323B;color:#EDEFF3;border:1px solid #444C58;border-radius:8px;cursor:pointer;font-size:13.5px}
+.mock button.opt:hover{border-color:#8A93A3}
+.mock button.opt[aria-pressed="true"]{background:#F5B942;color:#1F2329;border-color:#F5B942;font-weight:700}
+.mock label.chk{display:flex;gap:8px;align-items:center;min-height:36px;cursor:pointer;font-size:13.5px}
+.mock label.chk input{width:18px;height:18px}
+.mock .nav{display:flex;flex-wrap:wrap;gap:6px}
+.mock .nav a{color:#EDEFF3;font-size:12.5px;padding:6px 8px;border:1px solid #444C58;border-radius:6px;text-decoration:none}
+.mock .nav a.cur{background:#3A414C;border-color:#8A93A3}
+.mock .note{font-size:12px;color:#B8BEC9;margin-top:14px;border-top:1px solid #3A414C;padding-top:10px}
+.demo .mock{display:none}
+.demo .stage{padding-top:12px;padding-bottom:12px}
+.homelink{font-size:12.5px;color:#3E4450}
+/* ---------- 휴대폰 프레임 ---------- */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{position:relative;width:380px;height:800px;background:#111;border-radius:44px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;background:var(--bg);border-radius:34px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{flex:0 0 32px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:12.5px;color:var(--text2);font-weight:600}
+.appbar{flex:0 0 56px;display:flex;align-items:center;gap:4px;padding:0 6px 0 4px}
+.appbar .title{font-size:20px;font-weight:800;flex:1;padding-left:16px;letter-spacing:-.4px}
+.appbar .title b{color:var(--accent)}
+.iconbtn{min-width:48px;min-height:48px;border:0;background:transparent;border-radius:24px;font-size:22px;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.iconbtn:hover{background:var(--surface)}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;touch-action:pan-y}
+.gesture{flex:0 0 22px;display:flex;align-items:center;justify-content:center}
+.gesture span{width:110px;height:4px;border-radius:2px;background:#C9CED6}
+.caption{font-size:12.5px;color:#3E4450;text-align:center;max-width:380px;margin:0}
+.snack{position:absolute;left:14px;right:14px;bottom:36px;background:#23272E;color:#fff;border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translateY(20px);opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.snack.show{transform:none;opacity:1}
+.btn{min-height:48px;border-radius:12px;border:0;font-size:15px;font-weight:700;padding:0 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1A43BE}
+.btn-line{background:#fff;color:var(--accent);border:1.5px solid var(--accent-line)}
+.spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ---------- S02 전용 ---------- */
+.tabs{flex:0 0 auto;display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.tab{flex:1;min-height:48px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;position:relative;padding:0 4px}
+.tab[aria-selected="true"]{color:var(--text);font-weight:800}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:18%;right:18%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--accent)}
+.band{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px 10px 18px;font-size:14px;line-height:1.45}
+.band.warn{background:var(--warn-bg);color:var(--warn-text);border-bottom:1px solid var(--warn-line)}
+.band.info{background:var(--surface);color:var(--text2);border-bottom:1px solid var(--line)}
+.band .msg{flex:1}
+.band .btn{min-height:40px;font-size:13.5px;padding:0 12px;background:#fff;color:var(--warn-text);border:1.5px solid #E5BE73;white-space:nowrap}
+.ptr{height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:height .15s}
+.ptr .spinner{width:24px;height:24px}
+.ptr.hint{color:var(--muted);font-size:13px}
+.top{padding:20px 22px 6px}
+.round{font-size:13px;font-weight:700;color:var(--accent);margin:0 0 8px}
+.notice{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0}
+.list{list-style:none;margin:0;padding:6px 0 24px}
+.list li + li .card{border-top:1px solid var(--line)}
+.card{display:block;padding:22px 22px;color:inherit;text-decoration:none;-webkit-user-drag:none;user-select:none}
+.card:hover{background:#FAFBFC}
+.card .hook{display:block;font-size:18px;font-weight:800;line-height:1.42;letter-spacing:-.3px;color:var(--text)}
+.card .ttl{display:block;font-size:14.5px;font-weight:400;line-height:1.5;color:var(--muted);margin-top:8px}
+.other{margin:4px 0 28px;padding:16px 0 0;border-top:8px solid #F2F4F7}
+.other-title{font-size:13px;font-weight:700;color:var(--muted);margin:0 22px 6px}
+.other-list{list-style:none;margin:0;padding:0}
+.other-item{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 22px;border:0;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;text-decoration:none;-webkit-user-drag:none}
+.other-item:hover{background:#FAFBFC}
+.other-item .cat{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--accent);background:#EEF2FF;border-radius:6px;padding:3px 7px}
+.other-item .ohook{flex:1 1 auto;font-size:14.5px;line-height:1.45;color:var(--text2);word-break:keep-all}
+.other-item .ext{flex:0 0 auto;color:var(--muted);font-size:14px}
+.empty{padding:90px 30px 40px;text-align:center}
+.empty .ico{font-size:34px;color:#A0A7B3;line-height:1}
+.empty p{font-size:16px;line-height:1.55;color:var(--text2);margin:14px 0 20px;font-weight:600}
+.loading{padding:120px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);font-size:14px}
+@media (max-width:440px){
+  .stage{padding:12px 0 24px}
+  .mock{width:calc(100% - 32px)}
+  .phone{width:100%;max-width:380px;height:760px;border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+/* 시연 모드: ?demo=1 이면 목업 설명 패널을 숨기고, 화면 사이 이동에 demo=1을 이어 붙인다. 노트북 화면 높이에 맞춰 휴대폰을 줄인다. */
+(function(){
+  var demo=new URLSearchParams(location.search).get("demo")==="1";
+  if(demo) document.documentElement.classList.add("demo");
+  window.nbGo=function(u){ if(demo && !/[?&]demo=1/.test(u)) u+=(u.indexOf("?")<0?"?":"&")+"demo=1"; location.href=u; };
+  document.addEventListener("click",function(e){
+    if(!demo||e.defaultPrevented) return;
+    var a=e.target.closest&&e.target.closest("a[href]"); if(!a||a.target) return;
+    var h=a.getAttribute("href"); if(!/\.html(\?|#|$)/.test(h)) return;
+    e.preventDefault(); window.nbGo(h);
+  });
+  function fit(){
+    var w=document.querySelector(".phone-wrap"); if(!w) return;
+    w.style.zoom=1; if(window.innerWidth<=440) return;
+    var s=Math.min(1,Math.max(.55,(window.innerHeight-(demo?60:100))/w.offsetHeight)); w.style.zoom=s;
+  }
+  window.addEventListener("resize",fit); document.addEventListener("DOMContentLoaded",fit);
+})();
+</script>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===== 목업 전용 컨트롤 (실제 앱 화면 아님) ===== -->
+  <aside class="mock" aria-label="목업 전용 상태 보기 컨트롤">
+    <span class="badge">목업 전용 · 앱 화면 아님</span>
+    <h1>S02 뉴스 목록</h1>
+    <p class="sub">상태를 고르면 휴대폰 화면이 바뀝니다. 탭 누르기, 좌우로 끌기(탭 넘기기), 목록 맨 위에서 아래로 끌기(새로고침), 칸 누르기(→ S03), ⚙(→ S04)도 됩니다.</p>
+
+    <h2>상태 보기</h2>
+    <div class="opts" id="presets">
+      <button class="opt" data-p="normal">정상 목록 (탭 3개)</button>
+      <button class="opt" data-p="loading">불러오는 중</button>
+      <button class="opt" data-p="nofield">분야 미선택 (M6)</button>
+      <button class="opt" data-p="noresult">결과 없음 (M5)</button>
+      <button class="opt" data-p="offlineCached">인터넷 없음 + 이전 뉴스 (M3)</button>
+      <button class="opt" data-p="offlineEmpty">인터넷 없음 + 받은 것 없음 (M4)</button>
+    </div>
+    <h2>겹쳐 보기</h2>
+    <label class="chk"><input type="checkbox" id="denied"> 알림 권한 거부 배너 (M8)</label>
+    <div class="opts"><button class="opt" id="refreshBtn">아래로 당겨 새로고침 흉내</button></div>
+
+    <h2>다른 화면</h2>
+    <nav class="nav" aria-label="목업 화면 이동">
+      <a href="index.html">시연 시작</a>
+      <a href="00_알림.html">SYS-2 알림</a>
+      <a href="01_분야선택.html">S01 분야 선택</a>
+      <a href="02_뉴스목록.html" class="cur">S02 뉴스 목록</a>
+      <a href="03_종합기사.html">S03 종합 기사</a>
+      <a href="04_설정.html">S04 설정</a>
+    </nav>
+    <p class="note">예시 기사·어그로 한 줄·언론사는 모두 <b>지어낸 예시</b>입니다. 예시 분야: 나의 관심 분야 = 과학 › 우주, 추천 뉴스 = 경제. 칸에는 어그로 한 줄 + 제목만 넣었고 보도 언론사 수·날짜·사진은 넣지 않았습니다. 오늘의 화제 첫 칸은 아침 7시 알림으로 온 기사입니다.</p>
+  </aside>
+
+  <!-- ===== 휴대폰 ===== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen">
+        <div class="statusbar" aria-hidden="true"><span>7:02</span><span>▼ ▲ ▮</span></div>
+        <header class="appbar">
+          <span class="title">뉴스 <b>봐</b></span>
+          <a class="iconbtn" href="04_설정.html" aria-label="설정">⚙</a>
+        </header>
+        <div class="tabs" role="tablist" aria-label="뉴스 페이지">
+          <button class="tab" role="tab" id="t-hot" data-t="hot">오늘의 화제</button>
+          <button class="tab" role="tab" id="t-mine" data-t="mine">나의 관심 분야</button>
+          <button class="tab" role="tab" id="t-rec" data-t="rec">추천 뉴스</button>
+        </div>
+        <div id="bands"></div>
+        <main class="body" id="main" role="tabpanel">
+          <div class="ptr" id="ptr"></div>
+          <div id="content"></div>
+        </main>
+        <div class="gesture" aria-hidden="true"><span></span></div>
+        <div class="snack" id="snack" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="caption">휴대폰 세로 화면 목업 (가로 360px 기준)</p>
+    <a class="homelink" href="index.html">시연 시작 페이지로</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var M1="“오늘의 한 문장”은 흥미를 위해 사실을 과장할 수 있어요. 정확한 내용은 꼭 기사 본문에서 확인해 주세요.";
+  // [기사 id, 어그로 한 줄, 종합 기사 제목] - 03_종합기사.html 의 ARTICLES 와 같아야 함
+  var DATA={
+    hot:[
+      ["hot1","점심값 1만 원 시대, 직장인 지갑이 비명을","외식 물가 석 달째 상승… 김밥·냉면 가격 일제히 올라"],
+      ["hot2","지하철 요금, 내년부터 이만큼 오른다고?","수도권 지하철 기본요금 150원 인상안 확정… 내년 3월부터 적용"],
+      ["hot3","올겨울, 패딩 꺼내기 전에 이것부터 확인하세요","기상 당국 “올겨울 평년보다 춥다”… 12월에 한파 잦을 듯"]
+    ],
+    mine:[
+      ["mine1","우리 손으로 만든 위성, 달 궤도에 딱 붙었다","국산 달 탐사 위성, 목표 궤도 진입 성공… 본격 관측 시작"],
+      ["mine2","밤하늘 쇼, 이번 주말이 마지막 기회","가을 유성우 이번 주말 절정… 도심 밖에서 시간당 수십 개 관측 가능"]
+    ],
+    rec:[
+      ["rec1","전세 대출 이자, 다음 달부터 조금 숨통 트인다","시중은행 전세대출 금리 인하 잇따라… 0.2%포인트 안팎"],
+      ["rec2","환율이 출렁이면 내 해외 직구 가격은?","원·달러 환율 사흘째 상승… 해외 직구·여행 비용 부담 커져"]
+    ]
+  };
+  // 다른 분야 한 줄 (추천 뉴스 탭 아래에만 작게, 누르면 원문 기사 — 03 FR-01-9)
+  var OTHER=[
+    ["정치","국회, 오늘 밤 ‘마라톤 회의’ 예고… 결론 나올까"],
+    ["사회","수능 D-30, 올해 시험장 규칙 이것 바뀐다"],
+    ["세계","지구 반대편 선거, 우리 물가까지 흔든다?"],
+    ["IT·컴퓨터","내 사진이 AI 학습에? 설정 하나로 막는 법"],
+    ["자연·환경","올가을 단풍, 예년보다 일주일 늦는 이유"],
+    ["문화·연예","극장가 비수기 깬 이 영화, 벌써 300만"],
+    ["스포츠","가을야구 마지막 한 자리, 오늘 밤 결판"],
+    ["생활·건강","환절기 감기, 이 습관 하나가 갈랐다"]
+  ];
+  var TABS=["hot","mine","rec"];
+  var st={tab:"hot",state:"normal",denied:false,refreshing:false};
+  var $=function(id){return document.getElementById(id);};
+
+  function esc(s){return s.replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function render(){
+    // 탭
+    TABS.forEach(function(t){
+      var b=$("t-"+t); var on=t===st.tab;
+      b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1;
+    });
+    $("main").setAttribute("aria-labelledby","t-"+st.tab);
+
+    // 띠 (알림 배너가 위, 인터넷 없음이 아래 - Q9)
+    var h="";
+    if(st.denied){
+      h+='<div class="band warn" role="region" aria-label="알림 권한 안내"><span class="msg">알림을 켜야 뉴스가 먼저 찾아와요</span><button class="btn" id="goSettings">설정으로 이동</button></div>';
+    }
+    if(st.state==="offlineCached"){
+      h+='<div class="band info" role="status"><span aria-hidden="true">ⓘ</span><span class="msg">인터넷 연결이 없어 이전 뉴스를 보여드려요</span></div>';
+    }
+    $("bands").innerHTML=h;
+    var gs=$("goSettings");
+    if(gs) gs.addEventListener("click",function(){snack("[시스템 화면 SYS-3] 안드로이드 앱 설정 화면이 열려요 (목업에서는 이동하지 않음)");});
+
+    // 본문
+    var c="";
+    var s=st.state;
+    if(s==="loading"){
+      c='<div class="loading" role="status"><div class="spinner" aria-hidden="true"></div>불러오는 중</div>';
+    }else if(s==="offlineEmpty"){
+      c=empty("⚠","뉴스를 불러오지 못했어요",'<button class="btn btn-primary" id="retry">다시 시도</button>');
+    }else if(s==="noresult"){
+      c=empty("◷","다음 뉴스는 12시에 도착해요","");
+    }else if(s==="nofield" && st.tab!=="hot"){
+      c=empty("☰","분야를 먼저 골라 주세요",'<a class="btn btn-primary" href="01_분야선택.html">분야 고르기</a>');
+    }else{
+      var round = s==="offlineCached" ? "10월 27일 저녁 뉴스" : "10월 28일 아침 뉴스";
+      c='<div class="top"><p class="round">'+round+'</p><p class="notice">'+esc(M1)+'</p></div><ul class="list">';
+      DATA[st.tab].forEach(function(it){
+        c+='<li><a class="card" draggable="false" href="03_종합기사.html?id='+it[0]+'"><span class="hook">'+esc(it[1])+'</span><span class="ttl">'+esc(it[2])+'</span></a></li>';
+      });
+      c+='</ul>';
+      if(st.tab==="rec"){
+        c+='<section class="other" aria-labelledby="otherTitle"><h2 id="otherTitle" class="other-title">다른 분야 한 줄</h2><ul class="other-list">';
+        OTHER.forEach(function(o,i){
+          var u="02_뉴스목록.html?view=original&o="+i;
+          c+='<li><a class="other-item" href="'+u+'" target="_blank" rel="noopener" draggable="false"><span class="cat">'+esc(o[0])+'</span><span class="ohook">'+esc(o[1])+'</span><span class="ext" aria-label="원문 기사 새 탭에서 열기">↗</span></a></li>';
+        });
+        c+='</ul></section>';
+      }
+    }
+    $("content").innerHTML=c;
+    var r=$("retry");
+    if(r) r.addEventListener("click",function(){ setState("loading",true); setTimeout(function(){setState("normal",true);},1200); });
+  }
+  function empty(ico,msg,btn){
+    return '<div class="empty"><div class="ico" aria-hidden="true">'+ico+'</div><p>'+msg+'</p>'+btn+'</div>';
+  }
+  // 다른 분야 한 줄 → 새 탭에 원문 기사 (SYS-4 휴대폰 인터넷 앱 흉내)
+  //   실제 링크(<a target="_blank">)라서 팝업 차단에 걸리지 않음. 새 탭은 이 파일을 ?view=original 로 다시 열어 원문 화면을 그림
+  //   (외부 주소·추가 파일 없이 file:// 로 열어도 동작).
+  function showOriginal(o){
+    document.documentElement.innerHTML=originalHTML(o).replace(/^<!doctype html><html[^>]*>/,"").replace(/<\/html>$/,"");
+  }
+  function originalHTML(o){
+    var p='<p style="height:14px;background:#E9ECF1;border-radius:4px;margin:0 0 12px"></p>';
+    return ('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>원문 기사 - '+esc(o[0])+'</title></head>'+
+      '<body style="margin:0;background:#EEF0F3;font-family:system-ui,\'Malgun Gothic\',sans-serif;color:#14171C;word-break:keep-all">'+
+      '<div style="max-width:420px;margin:0 auto;background:#fff;min-height:100vh">'+
+      '<div style="background:#F1F3F4;padding:10px 14px;font-size:13px;color:#5B6270;border-bottom:1px solid #E4E7EC">🔒 news.example / 원문 기사 <span style="float:right">SYS-4 인터넷 앱</span></div>'+
+      '<header style="padding:16px 20px;border-bottom:3px solid #14171C;font-size:22px;font-weight:900;letter-spacing:-1px">원문 기사</header>'+
+      '<main style="padding:20px"><p style="font-size:12.5px;color:#5B6270;margin:0 0 8px">'+esc(o[0])+' | 2026.10.28 06:30</p>'+
+      '<h1 style="font-size:22px;line-height:1.45;margin:0 0 18px">'+esc(o[1])+'</h1>'+
+      '<p style="font-size:16px;line-height:1.8;margin:0 0 18px;color:#3E4450">언론사 누리집에 실린 원문 기사 화면을 흉내 낸 예시입니다. 실제 앱에서는 휴대폰 기본 인터넷 앱으로 원문 기사 주소가 열립니다.</p>'+
+      p+p+p+'<p style="height:14px;width:55%;background:#E9ECF1;border-radius:4px"></p>'+
+      '<p style="margin-top:30px;font-size:13px;color:#5B6270">이 탭을 닫으면 뉴스 봐 목록 화면으로 돌아갑니다.</p></main></div></body></html>');
+  }
+  function setTab(t){ st.tab=t; render(); $("main").scrollTop=0; }
+  function setState(s,keepPreset){
+    st.state=s; render();
+    var btns=document.querySelectorAll("#presets .opt");
+    for(var i=0;i<btns.length;i++) btns[i].setAttribute("aria-pressed",String(btns[i].getAttribute("data-p")===s));
+  }
+
+  // 탭 누르기 + 키보드 좌우 화살표
+  document.querySelector(".tabs").addEventListener("click",function(e){var b=e.target.closest(".tab"); if(b) setTab(b.getAttribute("data-t"));});
+  document.querySelector(".tabs").addEventListener("keydown",function(e){
+    var i=TABS.indexOf(st.tab);
+    if(e.key==="ArrowRight"){setTab(TABS[(i+1)%3]);$("t-"+st.tab).focus();}
+    if(e.key==="ArrowLeft"){setTab(TABS[(i+2)%3]);$("t-"+st.tab).focus();}
+  });
+
+  // 좌우 밀기(탭 넘기기, Q11) + 아래로 당겨 새로고침
+  var main=$("main"), ptr=$("ptr"), drag=null, moved=false;
+  main.addEventListener("pointerdown",function(e){ drag={x:e.clientX,y:e.clientY,top:main.scrollTop===0}; moved=false; });
+  main.addEventListener("pointermove",function(e){
+    if(!drag) return;
+    var dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    if(Math.abs(dx)>8||Math.abs(dy)>8) moved=true;
+    if(drag.top && dy>0 && Math.abs(dy)>Math.abs(dx) && !st.refreshing){
+      ptr.className="ptr hint"; ptr.style.height=Math.min(dy*0.5,56)+"px";
+      ptr.textContent = dy>110 ? "놓으면 새로고침" : "아래로 당겨 새로고침";
+    }
+  });
+  function endDrag(e){
+    if(!drag) return;
+    var dx=e.clientX-drag.x, dy=e.clientY-drag.y, wasTop=drag.top; drag=null;
+    if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.5){
+      var i=TABS.indexOf(st.tab);
+      if(dx<0 && i<2) setTab(TABS[i+1]);
+      if(dx>0 && i>0) setTab(TABS[i-1]);
+    }
+    if(wasTop && dy>110 && Math.abs(dy)>Math.abs(dx)) refresh();
+    else if(!st.refreshing){ ptr.style.height="0"; }
+  }
+  main.addEventListener("pointerup",endDrag);
+  main.addEventListener("pointercancel",function(){drag=null; if(!st.refreshing) ptr.style.height="0";});
+  main.addEventListener("pointerleave",function(e){ if(drag) endDrag(e); });
+  main.addEventListener("click",function(e){ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } },true);
+
+  function refresh(){
+    if(st.refreshing) return;
+    st.refreshing=true;
+    ptr.className="ptr"; ptr.innerHTML='<div class="spinner" aria-hidden="true"></div>'; ptr.style.height="52px";
+    setTimeout(function(){ st.refreshing=false; ptr.style.height="0"; ptr.innerHTML=""; snack("최신 뉴스를 다시 읽어 왔어요 (목업 흉내)"); },1000);
+  }
+  $("refreshBtn").addEventListener("click",function(){ main.scrollTop=0; refresh(); });
+
+  $("denied").addEventListener("change",function(){ st.denied=this.checked; render(); });
+  $("presets").addEventListener("click",function(e){ var b=e.target.closest(".opt"); if(b) setState(b.getAttribute("data-p")); });
+
+  var snackT=null;
+  function snack(msg){var s=$("snack");s.textContent=msg;s.classList.add("show");clearTimeout(snackT);snackT=setTimeout(function(){s.classList.remove("show");},2800);}
+
+  // 다른 목업에서 넘어온 경우 (?tab=, ?state=, ?notif=denied, ?msg=notfound)
+  var qs=new URLSearchParams(location.search);
+  if(qs.get("view")==="original"){ showOriginal(OTHER[+qs.get("o")]||OTHER[0]); return; }
+  if(TABS.indexOf(qs.get("tab"))>=0) st.tab=qs.get("tab");
+  if(qs.get("notif")==="denied"){ st.denied=true; $("denied").checked=true; }
+  var initial = ["normal","loading","nofield","noresult","offlineCached","offlineEmpty"].indexOf(qs.get("state"))>=0 ? qs.get("state") : "normal";
+  setState(initial);
+  if(qs.get("msg")==="notfound") snack("기사를 불러오지 못했어요");
+})();
+</script>
+</body>
+</html>

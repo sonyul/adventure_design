@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S03 종합 기사 - 뉴스 봐 목업</title>
+<!--
+  뉴스 봐 목업 S03 종합 기사 + 단어 해설 창 (근거: docs/design/04_화면설계서.md v1.3 4장 S03, 5장 M1·M7, 7장)
+  - 자기완결형 단일 HTML. 외부 CDN·웹폰트 없음(시스템 글꼴).
+  - 요소 순서(✅ FR-02-7): 어그로 한 줄 → 안내 문구 → 제목 → 본문(밑줄 단어) → 한 줄 결론 → 출처.
+  - ✅ 확정값 반영(v1.2): Q13(← + 페이지 이름, "결론" 이름표 + 옅은 바탕 칸, 출처 날짜 없음),
+    Q14(해설 창은 바깥 누르기·뒤로 가기·아래로 끌어내리기로 닫힘, 닫기 버튼 없음), Q12(불러오는 중, M7은 아래 띠), Q7(뒤로 가면 기사가 속한 탭).
+  - ?id= 로 기사를 고름(02 목록의 칸마다 자기 기사). id=hot1 은 알림(00_알림.html)으로 들어오는 기사이며 어그로 한 줄이 알림 문장과 같음(FR-04-3).
+  - 출처를 누르면 새 탭에 원문 기사(SYS-4 브라우저 흉내)가 열림(FR-02-5).
+  - 예시 기사·어그로 한 줄·언론사(가나일보 등)·인용은 모두 지어낸 내용. 실존 인물 없음. 보도 언론사 수는 넣지 않음(MVP 제외).
+  - 왼쪽 노란 점선 상자는 "목업 전용 컨트롤"로 실제 앱 화면이 아님. ?demo=1 이면 숨김(발표 모드).
+-->
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#FFFFFF; --surface:#F6F7F9; --line:#E4E7EC; --text:#14171C; --text2:#3E4450; --muted:#5B6270;
+  --accent:#1D4ED8; --accent-weak:#EEF3FE; --accent-line:#BFD0F8;
+  --warn-bg:#FFF4E0; --warn-text:#6B4100; --warn-line:#F2D49B; --err-text:#B42318;
+  --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+html,body{margin:0}
+body{background:#DDE1E7;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+button{font-family:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 16px 40px;flex-wrap:wrap}
+/* ---------- 목업 전용 컨트롤 (실제 앱 아님) ---------- */
+.mock{width:280px;flex:0 0 auto;background:#1F2329;color:#EDEFF3;border:2px dashed #F5B942;border-radius:14px;padding:16px;font-size:14px;line-height:1.5}
+.mock .badge{display:inline-block;background:#F5B942;color:#1F2329;font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+.mock h1{font-size:16px;margin:10px 0 2px}
+.mock p.sub{margin:0 0 4px;color:#B8BEC9;font-size:13px}
+.mock h2{font-size:13px;color:#F5B942;margin:16px 0 8px;font-weight:700}
+.mock .opts{display:flex;flex-direction:column;gap:6px}
+.mock button.opt{min-height:40px;text-align:left;padding:8px 12px;background:#2C323B;color:#EDEFF3;border:1px solid #444C58;border-radius:8px;cursor:pointer;font-size:13.5px}
+.mock button.opt:hover{border-color:#8A93A3}
+.mock button.opt[aria-pressed="true"]{background:#F5B942;color:#1F2329;border-color:#F5B942;font-weight:700}
+.mock .nav{display:flex;flex-wrap:wrap;gap:6px}
+.mock .nav a{color:#EDEFF3;font-size:12.5px;padding:6px 8px;border:1px solid #444C58;border-radius:6px;text-decoration:none}
+.mock .nav a.cur{background:#3A414C;border-color:#8A93A3}
+.mock .note{font-size:12px;color:#B8BEC9;margin-top:14px;border-top:1px solid #3A414C;padding-top:10px}
+.demo .mock{display:none}
+.demo .stage{padding-top:12px;padding-bottom:12px}
+.homelink{font-size:12.5px;color:#3E4450}
+/* ---------- 휴대폰 프레임 ---------- */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{position:relative;width:380px;height:800px;background:#111;border-radius:44px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;background:var(--bg);border-radius:34px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{flex:0 0 32px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:12.5px;color:var(--text2);font-weight:600}
+.appbar{flex:0 0 56px;display:flex;align-items:center;gap:2px;padding:0 6px 0 4px;border-bottom:1px solid transparent}
+.appbar .title{font-size:17px;font-weight:700;flex:1}
+.iconbtn{min-width:48px;min-height:48px;border:0;background:transparent;border-radius:24px;font-size:22px;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.iconbtn:hover{background:var(--surface)}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.gesture{flex:0 0 22px;display:flex;align-items:center;justify-content:center}
+.gesture span{width:110px;height:4px;border-radius:2px;background:#C9CED6}
+.caption{font-size:12.5px;color:#3E4450;text-align:center;max-width:380px;margin:0}
+.snack{position:absolute;left:14px;right:14px;bottom:36px;background:#23272E;color:#fff;border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translateY(20px);opacity:0;pointer-events:none;transition:.2s;z-index:70}
+.snack.show{transform:none;opacity:1}
+.flow{position:absolute;inset:0;background:rgba(20,23,28,.55);display:none;align-items:center;justify-content:center;padding:22px;z-index:60}
+.flow.show{display:flex}
+.flow .card{background:#fff;border:2px dashed #E0A019;border-radius:14px;padding:20px;width:100%}
+.flow .tag{font-size:12px;font-weight:700;color:#6B4100;background:#FFF1D0;display:inline-block;padding:2px 8px;border-radius:6px}
+.flow h3{font-size:17px;margin:12px 0 6px;line-height:1.4}
+.flow p{font-size:14px;color:var(--text2);margin:0 0 16px;line-height:1.55}
+.flow .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btn{min-height:48px;border-radius:12px;border:0;font-size:15px;font-weight:700;padding:0 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-line{background:#fff;color:var(--accent);border:1.5px solid var(--accent-line)}
+.spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ---------- S03 전용 ---------- */
+article{padding:12px 24px 36px}
+.hook{font-size:24px;font-weight:800;line-height:1.4;letter-spacing:-.5px;margin:6px 0 0}
+.notice{font-size:12.5px;line-height:1.55;color:var(--muted);margin:10px 0 0}
+.headline{font-size:18px;font-weight:700;line-height:1.5;color:var(--text2);margin:26px 0 0;padding-top:22px;border-top:1px solid var(--line)}
+.text{font-size:16.5px;line-height:1.85;color:var(--text);margin-top:14px}
+.text p{margin:0 0 18px;word-break:keep-all}
+.term{font:inherit;color:inherit;background:none;border:0;padding:2px 0;margin:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:5px;border-radius:3px}
+.term:hover{background:var(--accent-weak)}
+.term[aria-expanded="true"]{background:var(--accent-weak)}
+.conclusion{margin:8px 0 0;background:var(--surface);border-radius:12px;padding:16px 18px}
+.conclusion .lbl{display:inline-block;font-size:12.5px;font-weight:800;color:#fff;background:var(--accent);padding:2px 9px;border-radius:6px}
+.conclusion p{margin:10px 0 0;font-size:16px;line-height:1.7;font-weight:600;word-break:keep-all}
+.sources{margin-top:34px}
+.sources h3{font-size:15px;margin:0 0 6px;color:var(--text2)}
+.sources ul{list-style:none;margin:0;padding:0}
+.sources a{display:flex;gap:10px;align-items:flex-start;min-height:48px;padding:12px 0;border-bottom:1px solid var(--line);color:var(--text2);text-decoration:none;font-size:14.5px;line-height:1.5}
+.sources a:hover .t{text-decoration:underline}
+.sources .press{font-weight:700;color:var(--text);white-space:nowrap}
+.sources .t{flex:1}
+.sources .ext{color:var(--muted);font-size:13px;padding-top:2px}
+.loading{padding:160px 0;display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--muted);font-size:14px}
+/* 아래에서 올라오는 해설 창 */
+.scrim{position:absolute;inset:0;background:rgba(20,23,28,.42);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:8px 24px 48px;box-shadow:0 -8px 30px rgba(0,0,0,.18);transform:translateY(calc(100% + 30px));transition:transform .24s cubic-bezier(.2,.8,.2,1);z-index:41;touch-action:none}
+.sheet.show{transform:translateY(0)}
+.sheet.dragging{transition:none}
+.handle{display:flex;justify-content:center;padding:6px 0 14px;cursor:grab}
+.handle span{width:40px;height:5px;border-radius:3px;background:#C9CED6}
+.sheet h2{font-size:22px;margin:0 0 10px;letter-spacing:-.3px}
+.sheet p{font-size:16px;line-height:1.7;color:var(--text2);margin:0;word-break:keep-all}
+@media (max-width:440px){
+  .stage{padding:12px 0 24px}
+  .mock{width:calc(100% - 32px)}
+  .phone{width:100%;max-width:380px;height:760px;border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+/* 시연 모드: ?demo=1 이면 목업 설명 패널을 숨기고, 화면 사이 이동에 demo=1을 이어 붙인다. 노트북 화면 높이에 맞춰 휴대폰을 줄인다. */
+(function(){
+  var demo=new URLSearchParams(location.search).get("demo")==="1";
+  if(demo) document.documentElement.classList.add("demo");
+  window.nbGo=function(u){ if(demo && !/[?&]demo=1/.test(u)) u+=(u.indexOf("?")<0?"?":"&")+"demo=1"; location.href=u; };
+  document.addEventListener("click",function(e){
+    if(!demo||e.defaultPrevented) return;
+    var a=e.target.closest&&e.target.closest("a[href]"); if(!a||a.target) return;
+    var h=a.getAttribute("href"); if(!/\.html(\?|#|$)/.test(h)) return;
+    e.preventDefault(); window.nbGo(h);
+  });
+  function fit(){
+    var w=document.querySelector(".phone-wrap"); if(!w) return;
+    w.style.zoom=1; if(window.innerWidth<=440) return;
+    var s=Math.min(1,Math.max(.55,(window.innerHeight-(demo?60:100))/w.offsetHeight)); w.style.zoom=s;
+  }
+  window.addEventListener("resize",fit); document.addEventListener("DOMContentLoaded",fit);
+})();
+</script>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===== 목업 전용 컨트롤 (실제 앱 화면 아님) ===== -->
+  <aside class="mock" aria-label="목업 전용 상태 보기 컨트롤">
+    <span class="badge">목업 전용 · 앱 화면 아님</span>
+    <h1>S03 종합 기사</h1>
+    <p class="sub">본문의 밑줄 단어를 누르면 아래에서 해설 창이 올라옵니다. 창 바깥 누르기, 손잡이를 아래로 끌기, Esc 키, 아래 "휴대폰 뒤로 가기"로 닫을 수 있어요. 출처를 누르면 새 탭에 원문 기사가 열려요.</p>
+
+    <h2>상태 보기</h2>
+    <div class="opts" id="presets">
+      <button class="opt" data-p="normal">정상 기사</button>
+      <button class="opt" data-p="sheet">단어 해설 창 열림</button>
+      <button class="opt" data-p="noterms">해설 단어 0개 (밑줄 없음)</button>
+      <button class="opt" data-p="fromNoti">알림으로 들어옴 (오늘의 화제 기사)</button>
+      <button class="opt" data-p="loading">불러오는 중</button>
+      <button class="opt" data-p="notfound">기사를 찾을 수 없음 (M7)</button>
+    </div>
+    <h2>흉내 내기</h2>
+    <div class="opts"><button class="opt" id="hwBack">휴대폰 뒤로 가기 버튼</button></div>
+
+    <h2>다른 화면</h2>
+    <nav class="nav" aria-label="목업 화면 이동">
+      <a href="index.html">시연 시작</a>
+      <a href="00_알림.html">SYS-2 알림</a>
+      <a href="01_분야선택.html">S01 분야 선택</a>
+      <a href="02_뉴스목록.html">S02 뉴스 목록</a>
+      <a href="03_종합기사.html" class="cur">S03 종합 기사</a>
+      <a href="04_설정.html">S04 설정</a>
+    </nav>
+    <p class="note">기사·어그로 한 줄·언론사(가나일보 등)·인용은 모두 <b>지어낸 예시</b>입니다. 목록의 칸마다 자기 기사가 열리고, 상단 페이지 이름과 뒤로 가기 목적지는 그 기사가 속한 탭을 따릅니다.</p>
+  </aside>
+
+  <!-- ===== 휴대폰 ===== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen">
+        <div class="statusbar" aria-hidden="true"><span>7:01</span><span>▼ ▲ ▮</span></div>
+        <header class="appbar">
+          <a class="iconbtn" id="backBtn" href="02_뉴스목록.html" aria-label="뒤로 가기">←</a>
+          <span class="title" id="pageName">오늘의 화제</span>
+        </header>
+        <main class="body" id="main"></main>
+        <div class="gesture" aria-hidden="true"><span></span></div>
+
+        <div class="scrim" id="scrim"></div>
+        <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetWord" aria-hidden="true">
+          <div class="handle" id="handle" aria-hidden="true"><span></span></div>
+          <h2 id="sheetWord" tabindex="-1"></h2>
+          <p id="sheetDesc"></p>
+        </section>
+
+        <div class="snack" id="snack" role="status" aria-live="polite"></div>
+        <div class="flow" id="flow" role="dialog" aria-modal="true" aria-labelledby="flowTitle">
+          <div class="card">
+            <span class="tag" id="flowTag"></span>
+            <h3 id="flowTitle"></h3>
+            <p id="flowText"></p>
+            <div class="acts" id="flowActs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">휴대폰 세로 화면 목업 (가로 360px 기준)</p>
+    <a class="homelink" href="index.html">시연 시작 페이지로</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var M1="“오늘의 한 문장”은 흥미를 위해 사실을 과장할 수 있어요. 정확한 내용은 꼭 기사 본문에서 확인해 주세요.";
+  // [[단어]] 는 해설 단어(처음 나온 곳에만 밑줄). 어그로 한 줄·제목은 02_뉴스목록.html 칸과 같아야 함.
+  var ARTICLES={
+    hot1:{tab:"hot",
+      hook:"점심값 1만 원 시대, 직장인 지갑이 비명을", /* = 00_알림.html 알림 문장 (FR-04-3) */
+      title:"외식 물가 석 달째 상승… 김밥·냉면 가격 일제히 올라",
+      body:[
+        "외식 물가가 석 달 연속 오르면서 점심 한 끼 값이 부담스럽다는 목소리가 커지고 있다. 이번 달 발표된 [[소비자물가지수]]를 보면 외식 부문은 1년 전보다 4%대 올라 전체 물가 상승률을 웃돌았다. 특히 김밥과 냉면, 칼국수처럼 직장인이 자주 찾는 메뉴의 오름폭이 컸다.",
+        "가격이 오른 가장 큰 이유로는 [[원재료]] 값과 인건비 상승이 꼽힌다. 쌀과 채소, 식용유 값이 함께 오르면서 식당들이 버티기 어려워졌고, 늘어난 비용을 메뉴 가격에 반영하는 [[가격 전가]]가 이어졌다는 분석이다. 한 식당 주인은 “재료값이 오를 때마다 가격을 올리기도 손님께 미안하다”고 말했다.",
+        "숫자로 나타난 물가보다 사람들이 느끼는 [[체감 물가]]는 더 높다. 매일 사 먹는 점심값은 눈에 잘 띄기 때문에, 전체 물가가 조금만 올라도 부담을 크게 느낀다는 것이다. 도시락을 싸 오거나 회사 구내식당을 찾는 직장인도 늘고 있고, 메뉴를 고를 때 가격부터 확인한다는 사람도 지난해보다 많아졌다는 조사 결과가 나왔다.",
+        "정부는 농산물 할인 지원과 외식업 원재료 구입 지원을 늘리겠다고 밝혔다. 다만 [[기준금리]]가 높은 수준에서 유지되고 있어 식당의 대출 이자 부담도 여전한 만큼, 메뉴 가격이 곧바로 내려가기는 어렵다는 전망이 많다. 전문가들은 지원과 함께 지역별 가격 정보를 쉽게 비교할 수 있게 하는 등 소비자 부담을 덜 방법도 찾아야 한다고 조언한다."
+      ],
+      terms:{
+        "소비자물가지수":"사람들이 자주 사는 물건과 서비스의 값이 얼마나 변했는지를 하나의 숫자로 나타낸 지표예요.",
+        "원재료":"음식이나 물건을 만들 때 들어가는 기본 재료예요. 식당이라면 쌀·채소·고기 같은 것들이에요.",
+        "가격 전가":"늘어난 비용을 파는 쪽이 떠안지 않고, 판매 가격에 얹어 사는 사람에게 넘기는 것을 말해요.",
+        "체감 물가":"통계 숫자와 별개로, 사람들이 생활하면서 직접 느끼는 물가 수준이에요.",
+        "기준금리":"중앙은행이 정하는 기본 이자율이에요. 이 값에 따라 은행 대출 이자도 함께 오르내려요."
+      },
+      conclusion:"원재료값과 인건비 부담이 이어지는 한, 외식 물가는 당분간 쉽게 내려가지 않을 가능성이 크다.",
+      sources:[["가나일보","외식 물가 석 달째 상승… 김밥 한 줄 3,700원 시대"],["다라뉴스","냉면 한 그릇 1만 2천 원 넘어… 직장인 “점심이 무섭다”"],["마바경제","원재료값·인건비 부담에 식당들 줄줄이 가격 인상"],["사아방송","정부, 외식업 원재료 구입 지원 확대 방침"]]
+    },
+    hot2:{tab:"hot",
+      hook:"지하철 요금, 내년부터 이만큼 오른다고?",
+      title:"수도권 지하철 기본요금 150원 인상안 확정… 내년 3월부터 적용",
+      body:[
+        "수도권 지하철 기본요금이 내년 3월부터 150원 오른다. 교통 당국은 어제 열린 회의에서 요금 조정안을 확정했다고 밝혔다. 교통카드로 탈 때의 [[기본요금]]은 지금보다 150원 비싸지고, 청소년과 어린이 요금도 같은 비율로 조정된다.",
+        "요금을 올리는 가장 큰 이유는 해마다 쌓이는 [[운송 적자]]다. 전기요금과 인건비가 오르고 낡은 전동차를 바꾸는 데 드는 돈도 늘었지만, 요금은 몇 년째 그대로였다. 당국은 “안전 투자를 미루지 않으려면 피하기 어려운 결정”이라고 설명했다.",
+        "버스와 지하철을 갈아탈 때 적용되는 [[환승 할인]]은 그대로 유지된다. 다만 매일 출퇴근하는 직장인이라면 한 달에 6천 원 안팎을 더 내게 된다는 계산이 나온다. 시민들 사이에서는 “물가가 다 오르는데 교통비까지 오른다”는 불만과 “안전을 위해서라면 이해한다”는 반응이 엇갈린다.",
+        "당국은 인상과 함께 출퇴근 시간대 열차를 늘리고, 정기권 할인 폭을 키우는 방안도 검토하겠다고 밝혔다."
+      ],
+      terms:{
+        "기본요금":"거리와 상관없이 한 번 탈 때 처음 내는 요금이에요. 멀리 가면 여기에 거리만큼 요금이 더 붙어요.",
+        "운송 적자":"승객을 실어 나르며 번 돈보다 운영에 쓴 돈이 더 많아서 생긴 손해예요.",
+        "환승 할인":"버스와 지하철을 정해진 시간 안에 갈아탈 때 요금을 깎아 주는 제도예요."
+      },
+      conclusion:"요금 인상은 확정됐지만, 정기권 할인 같은 부담 완화책이 얼마나 나올지가 남은 관심사다.",
+      sources:[["다라뉴스","지하철 기본요금 150원 오른다… 내년 3월 시행"],["자차신문","교통 당국 “운송 적자 한계”… 요금 조정안 확정"],["가나일보","환승 할인은 유지… 직장인 월 6천 원 더 낸다"]]
+    },
+    hot3:{tab:"hot",
+      hook:"올겨울, 패딩 꺼내기 전에 이것부터 확인하세요",
+      title:"기상 당국 “올겨울 평년보다 춥다”… 12월에 한파 잦을 듯",
+      body:[
+        "올겨울은 [[평년]]보다 춥고, 특히 12월에 강한 추위가 자주 찾아올 것이라는 전망이 나왔다. 기상 당국은 어제 발표한 겨울철 전망에서 북쪽의 찬 공기가 예년보다 자주 내려올 가능성이 크다고 밝혔다.",
+        "12월에는 짧고 강한 추위가 여러 차례 반복될 것으로 보인다. 아침 기온이 크게 떨어지면 [[한파 특보]]가 내려질 수 있고, 바람이 강한 날에는 [[체감 온도]]가 실제 기온보다 훨씬 낮아진다. 1월과 2월은 평년과 비슷하겠지만, 기온 변화가 커서 갑자기 추워지는 날이 있겠다.",
+        "전문가들은 겨울옷을 꺼내기 전에 난방기기와 수도관부터 점검하라고 조언한다. 오래 쓰지 않은 전기난로는 전선이 상하지 않았는지 확인하고, 집 밖에 드러난 수도관은 헌 옷이나 보온재로 감싸 두는 것이 좋다. 노약자는 추운 새벽 외출을 줄이고, 외출할 때는 얇은 옷을 여러 겹 입는 것이 체온을 지키는 데 도움이 된다."
+      ],
+      terms:{
+        "평년":"지난 30년 동안의 날씨를 평균 낸 값이에요. 올해 날씨가 보통보다 어떤지 비교할 때 기준이 돼요.",
+        "한파 특보":"아침 기온이 크게 떨어져 피해가 예상될 때 기상 당국이 내리는 주의 안내예요. 주의보와 경보가 있어요.",
+        "체감 온도":"바람과 습도 때문에 사람이 실제로 느끼는 온도예요. 바람이 세면 실제 기온보다 더 춥게 느껴져요."
+      },
+      conclusion:"올겨울은 12월 한파에 대비해 난방기기와 수도관을 미리 점검해 두는 것이 좋다.",
+      sources:[["사아방송","기상 당국 겨울 전망 “평년보다 춥다”"],["카타일보","12월 한파 잦을 듯… 수도관 동파 주의"]]
+    },
+    mine1:{tab:"mine",
+      hook:"우리 손으로 만든 위성, 달 궤도에 딱 붙었다",
+      title:"국산 달 탐사 위성, 목표 궤도 진입 성공… 본격 관측 시작",
+      body:[
+        "우리 기술로 만든 달 탐사 위성이 목표했던 달 [[궤도]]에 들어가는 데 성공했다. 연구진은 위성이 지구를 떠난 지 넉 달 만에 달 상공 약 100km 높이를 도는 궤도에 안정적으로 자리 잡았다고 밝혔다.",
+        "궤도 진입은 이번 임무에서 가장 어려운 단계로 꼽혔다. 속도를 너무 많이 줄이면 달에 부딪히고, 덜 줄이면 달을 지나쳐 우주로 날아가 버리기 때문이다. 위성은 여러 차례 엔진을 짧게 켜고 끄며 속도를 조금씩 줄였고, 지상 연구진은 밤새 신호를 확인하며 이 과정을 지켜봤다.",
+        "위성은 앞으로 1년 동안 실린 [[관측 장비]]로 달 표면을 촬영하고 자원 분포를 조사한다. 이렇게 모은 자료는 앞으로 달에 착륙선을 보낼 때 내릴 곳, 즉 [[착륙 후보지]]를 고르는 데 쓰인다. 연구진은 “첫 사진은 다음 달쯤 공개할 수 있을 것”이라고 말했다."
+      ],
+      terms:{
+        "궤도":"행성이나 위성이 다른 천체 주위를 일정하게 도는 길이에요.",
+        "관측 장비":"멀리서 대상을 찍거나 재는 카메라·센서 같은 도구예요.",
+        "착륙 후보지":"탐사선이 안전하게 내려앉을 수 있을지 미리 살펴보는 장소예요."
+      },
+      conclusion:"궤도 진입에 성공하면서, 1년간의 달 관측과 착륙 후보지 찾기가 본격적으로 시작된다.",
+      sources:[["파하뉴스","국산 달 탐사 위성 궤도 진입 성공"],["가나일보","넉 달 여정 끝에 달 궤도에… 첫 사진은 다음 달"]]
+    },
+    mine2:{tab:"mine",
+      hook:"밤하늘 쇼, 이번 주말이 마지막 기회",
+      title:"가을 유성우 이번 주말 절정… 도심 밖에서 시간당 수십 개 관측 가능",
+      body:[
+        "가을철 대표 별똥별 무리인 [[유성우]]가 이번 주말 가장 많이 떨어질 것으로 보인다. 천문 연구 기관은 토요일 밤부터 일요일 새벽 사이가 [[극대기]]로, 하늘이 맑고 어두운 곳에서는 한 시간에 수십 개의 별똥별을 볼 수 있다고 밝혔다.",
+        "가장 잘 보이는 시간은 자정이 지난 새벽이다. 특별한 장비 없이 맨눈으로도 볼 수 있지만, 도시의 불빛이 밤하늘을 밝히는 [[광공해]]가 심한 곳에서는 몇 개밖에 보이지 않는다. 전문가들은 도심에서 벗어나 사방이 트인 곳을 찾고, 휴대폰 화면을 보지 말고 20분 정도 눈을 어둠에 익히라고 조언한다.",
+        "이번 주말을 놓치면 비슷한 규모의 유성우는 연말까지 기다려야 한다. 주말 날씨는 대체로 맑겠지만, 새벽에는 기온이 크게 떨어지는 만큼 두꺼운 옷과 담요를 챙기는 것이 좋다."
+      ],
+      terms:{
+        "유성우":"우주를 떠도는 작은 먼지 알갱이들이 한꺼번에 지구 대기로 들어와 별똥별이 비처럼 쏟아지는 현상이에요.",
+        "극대기":"유성우가 가장 많이 떨어지는 시기예요.",
+        "광공해":"도시의 지나친 불빛 때문에 밤하늘이 밝아져 별이 잘 보이지 않는 현상이에요."
+      },
+      conclusion:"이번 주말 새벽, 불빛이 적은 곳에서 눈을 어둠에 익히면 별똥별을 가장 많이 볼 수 있다.",
+      sources:[["사아방송","가을 유성우 이번 주말 절정"],["다라뉴스","별똥별 잘 보려면? 도심 벗어나 20분 기다리세요"]]
+    },
+    rec1:{tab:"rec",
+      hook:"전세 대출 이자, 다음 달부터 조금 숨통 트인다",
+      title:"시중은행 전세대출 금리 인하 잇따라… 0.2%포인트 안팎",
+      body:[
+        "시중은행들이 다음 달부터 [[전세대출]] 금리를 잇따라 내린다. 주요 은행들은 대출 금리를 0.2%포인트 안팎 낮추겠다고 밝혔다. 1억 원을 빌린 사람이라면 1년 이자가 20만 원 정도 줄어드는 셈이다.",
+        "은행들이 금리를 내리는 것은 돈을 빌려 오는 비용이 조금 낮아졌기 때문이다. 여기에 은행이 자체적으로 붙이는 [[가산금리]]를 줄이라는 목소리가 커진 것도 영향을 줬다. 은행들은 “서민 주거비 부담을 덜기 위한 결정”이라고 설명했다.",
+        "다만 모든 사람이 바로 혜택을 보는 것은 아니다. [[변동금리]]로 빌린 사람은 금리가 바뀌는 시점부터 이자가 줄지만, 고정금리로 빌린 사람은 그대로다. 전문가들은 새로 대출을 받거나 갈아탈 계획이라면 은행별 금리를 꼼꼼히 비교해 보라고 조언한다."
+      ],
+      terms:{
+        "전세대출":"전셋집 보증금을 마련하려고 은행에서 빌리는 돈이에요.",
+        "가산금리":"은행이 기본 금리에 덧붙이는 추가 이자예요. 은행의 비용과 이익이 여기에 들어가요.",
+        "변동금리":"정해진 기간마다 시장 금리에 따라 바뀌는 이자율이에요."
+      },
+      conclusion:"전세대출 이자 부담은 조금 줄겠지만, 변동금리인지에 따라 혜택을 받는 시점이 다르다.",
+      sources:[["마바경제","시중은행 전세대출 금리 0.2%p 인하"],["자차신문","전세 대출 이자 줄어든다… 변동금리부터 적용"]]
+    },
+    rec2:{tab:"rec",
+      hook:"환율이 출렁이면 내 해외 직구 가격은?",
+      title:"원·달러 환율 사흘째 상승… 해외 직구·여행 비용 부담 커져",
+      body:[
+        "원·달러 [[환율]]이 사흘 연속 올랐다. 1달러를 사려면 원화가 그만큼 더 필요하다는 뜻이다. 외환 시장에서는 해외 금리가 한동안 높게 유지될 것이라는 전망이 나오면서 달러 값이 오른 것으로 보고 있다.",
+        "[[원화 약세]]가 이어지면 가장 먼저 지갑에 영향을 받는 것은 [[해외 직구]]와 해외여행이다. 같은 100달러짜리 물건이라도 환율이 오르면 원화로 내야 하는 돈이 늘어난다. 카드로 결제하면 결제한 날이 아니라 카드사가 대금을 처리하는 날의 환율이 적용돼, 생각보다 더 많은 돈이 나갈 수 있다.",
+        "전문가들은 환율이 크게 움직이는 시기에는 급하지 않은 해외 결제를 미루거나, 여행 경비를 몇 번에 나눠 환전하라고 조언한다. 수입 원자재 값도 함께 올라 국내 물가에 부담이 될 수 있다는 걱정도 나온다."
+      ],
+      terms:{
+        "환율":"우리 돈과 다른 나라 돈을 바꿀 때의 비율이에요. 환율이 오르면 같은 달러를 사는 데 원화가 더 필요해요.",
+        "원화 약세":"우리 돈의 가치가 다른 나라 돈보다 떨어진 상태예요.",
+        "해외 직구":"해외 쇼핑몰에서 물건을 직접 사서 배송받는 것이에요."
+      },
+      conclusion:"환율이 오르는 동안에는 해외 결제를 서두르기보다 나눠서 준비하는 것이 부담을 줄이는 방법이다.",
+      sources:[["마바경제","원·달러 환율 사흘째 상승"],["카타일보","직구족 “같은 물건인데 더 비싸졌다”"]]
+    }
+  };
+  var TABNAME={hot:"오늘의 화제",mine:"나의 관심 분야",rec:"추천 뉴스"};
+  var st={id:"hot1",state:"normal"};
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return s.replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function art(){return ARTICLES[st.id];}
+  function listUrl(){return "02_뉴스목록.html?tab="+art().tab;}
+
+  function render(){
+    var A=art();
+    $("pageName").textContent=TABNAME[A.tab];
+    $("backBtn").setAttribute("href",listUrl());
+    var m=$("main");
+    if(st.state==="loading"){ m.innerHTML='<div class="loading" role="status"><div class="spinner" aria-hidden="true"></div>불러오는 중</div>'; return; }
+    if(st.state==="notfound"){ m.innerHTML=""; return; }
+    var withTerms = st.state!=="noterms";
+    var h='<article>';
+    h+='<h1 class="hook">'+esc(A.hook)+'</h1>';
+    h+='<p class="notice">'+esc(M1)+'</p>';
+    h+='<h2 class="headline">'+esc(A.title)+'</h2>';
+    h+='<div class="text">';
+    A.body.forEach(function(p){
+      var html=esc(p).replace(/\[\[(.+?)\]\]/g,function(_,w){
+        return withTerms ? '<button type="button" class="term" data-w="'+w+'" aria-haspopup="dialog" aria-expanded="false">'+w+'</button>' : w;
+      });
+      h+='<p>'+html+'</p>';
+    });
+    h+='</div>';
+    h+='<section class="conclusion" aria-label="한 줄 결론"><span class="lbl">결론</span><p>'+esc(A.conclusion)+'</p></section>';
+    h+='<section class="sources" aria-labelledby="srcH"><h3 id="srcH">출처</h3><ul>';
+    A.sources.forEach(function(s,i){
+      var u="03_종합기사.html?view=original&id="+st.id+"&s="+i;
+      h+='<li><a href="'+u+'" target="_blank" rel="noopener" class="src" data-i="'+i+'" aria-label="'+esc(s[0])+' · '+esc(s[1])+' (새 탭에서 원문 열기)"><span class="press">'+esc(s[0])+'</span><span aria-hidden="true">·</span><span class="t">'+esc(s[1])+'</span><span class="ext" aria-hidden="true">↗</span></a></li>';
+    });
+    h+='</ul></section></article>';
+    m.innerHTML=h;
+  }
+
+  // 출처 → 새 탭에 원문 기사 (SYS-4 휴대폰 인터넷 앱 흉내, FR-02-5)
+  //   실제 링크(<a target="_blank">)라서 팝업 차단에 걸리지 않음. 새 탭은 이 파일을 ?view=original 로 다시 열어 원문 화면을 그림
+  //   (외부 주소·추가 파일 없이 file:// 로 열어도 동작).
+  function showOriginal(s){
+    document.documentElement.innerHTML=originalHTML(s).replace(/^<!doctype html><html[^>]*>/,"").replace(/<\/html>$/,"");
+  }
+  function originalHTML(s){
+    var p='<p style="height:14px;background:#E9ECF1;border-radius:4px;margin:0 0 12px"></p>';
+    return ('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+esc(s[1])+' - '+esc(s[0])+'</title></head>'+
+      '<body style="margin:0;background:#EEF0F3;font-family:system-ui,\'Malgun Gothic\',sans-serif;color:#14171C;word-break:keep-all">'+
+      '<div style="max-width:420px;margin:0 auto;background:#fff;min-height:100vh">'+
+      '<div style="background:#F1F3F4;padding:10px 14px;font-size:13px;color:#5B6270;border-bottom:1px solid #E4E7EC">🔒 news.example / 원문 기사 <span style="float:right">SYS-4 인터넷 앱</span></div>'+
+      '<header style="padding:16px 20px;border-bottom:3px solid #14171C;font-size:22px;font-weight:900;letter-spacing:-1px">'+esc(s[0])+'</header>'+
+      '<main style="padding:20px">'+
+      '<p style="font-size:12.5px;color:#5B6270;margin:0 0 8px">경제·사회 | 2026.10.28 06:40</p>'+
+      '<h1 style="font-size:22px;line-height:1.45;margin:0 0 18px">'+esc(s[1])+'</h1>'+
+      '<p style="font-size:16px;line-height:1.8;margin:0 0 18px;color:#3E4450">언론사 누리집에 실린 원문 기사 화면을 흉내 낸 예시입니다. 실제 앱에서는 출처를 누르면 휴대폰 기본 인터넷 앱으로 이 기사의 실제 주소가 열립니다.</p>'+
+      p+p+p+'<p style="height:14px;width:60%;background:#E9ECF1;border-radius:4px;margin:0 0 26px"></p>'+p+p+'<p style="height:14px;width:40%;background:#E9ECF1;border-radius:4px"></p>'+
+      '<p style="margin-top:30px;font-size:13px;color:#5B6270">이 탭을 닫으면 뉴스 봐 종합 기사 화면으로 돌아갑니다.</p>'+
+      '</main></div></body></html>');
+  }
+
+  // 밑줄 단어 누르기 (출처는 실제 링크라 브라우저가 새 탭으로 엶)
+  $("main").addEventListener("click",function(e){
+    var t=e.target.closest(".term");
+    if(t){ openSheet(t.getAttribute("data-w"),t); return; }
+  });
+
+  // 해설 창
+  var lastTerm=null;
+  function openSheet(word,from){
+    lastTerm=from||null;
+    document.querySelectorAll(".term").forEach(function(x){x.setAttribute("aria-expanded",String(x===from));});
+    $("sheetWord").textContent=word; $("sheetDesc").textContent=art().terms[word];
+    $("sheet").style.transform=""; $("sheet").classList.add("show"); $("scrim").classList.add("show");
+    $("sheet").setAttribute("aria-hidden","false");
+    setTimeout(function(){$("sheetWord").focus();},50);
+  }
+  function closeSheet(){
+    if(!$("sheet").classList.contains("show")) return false;
+    $("sheet").classList.remove("show"); $("scrim").classList.remove("show");
+    $("sheet").style.transform=""; $("sheet").setAttribute("aria-hidden","true");
+    document.querySelectorAll(".term").forEach(function(x){x.setAttribute("aria-expanded","false");});
+    if(lastTerm && document.body.contains(lastTerm)) lastTerm.focus();
+    return true;
+  }
+  $("scrim").addEventListener("click",closeSheet);
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeSheet(); });
+
+  // 아래로 끌어내려 닫기 (Q14)
+  var sh=$("sheet"), dy0=null;
+  sh.addEventListener("pointerdown",function(e){ dy0=e.clientY; sh.classList.add("dragging"); sh.setPointerCapture(e.pointerId); });
+  sh.addEventListener("pointermove",function(e){ if(dy0===null) return; var d=Math.max(0,e.clientY-dy0); sh.style.transform="translateY("+d+"px)"; });
+  function up(e){
+    if(dy0===null) return;
+    var d=e.clientY-dy0; dy0=null; sh.classList.remove("dragging");
+    if(d>70) closeSheet(); else sh.style.transform="";
+  }
+  sh.addEventListener("pointerup",up); sh.addEventListener("pointercancel",up);
+
+  // 휴대폰 뒤로 가기 흉내: 창이 열려 있으면 닫기, 아니면 그 기사가 속한 탭 목록으로
+  $("hwBack").addEventListener("click",function(){
+    if($("flow").classList.contains("show")){ $("flow").classList.remove("show"); return; }
+    if(closeSheet()) return;
+    window.nbGo(listUrl());
+  });
+
+  var snackT=null;
+  function snack(msg){var s=$("snack");s.textContent=msg;s.classList.add("show");clearTimeout(snackT);snackT=setTimeout(function(){s.classList.remove("show");},2800);}
+
+  var navT=null;
+  function preset(p){
+    closeSheet(); $("flow").classList.remove("show"); clearTimeout(navT);
+    st.state = (p==="sheet"||p==="fromNoti") ? "normal" : p;
+    if(p==="fromNoti") st.id="hot1";
+    render(); $("main").scrollTop=0;
+    if(p==="sheet"){ var t=document.querySelector(".term"); if(t) openSheet(t.getAttribute("data-w"),t); }
+    if(p==="notfound"){
+      // M7 안내 띠를 보여준 뒤 바로 그 기사가 속한 페이지 목록으로 (Q12)
+      snack("기사를 불러오지 못했어요");
+      navT=setTimeout(function(){ window.nbGo(listUrl()+"&msg=notfound"); },1800);
+    }
+    var btns=document.querySelectorAll("#presets .opt");
+    for(var i=0;i<btns.length;i++) btns[i].setAttribute("aria-pressed",String(btns[i].getAttribute("data-p")===p));
+  }
+  $("presets").addEventListener("click",function(e){ var b=e.target.closest(".opt"); if(b) preset(b.getAttribute("data-p")); });
+
+  var qs=new URLSearchParams(location.search);
+  if(qs.get("view")==="original"){ var A0=ARTICLES[qs.get("id")]||ARTICLES.hot1; showOriginal(A0.sources[+qs.get("s")]||A0.sources[0]); return; }
+  if(ARTICLES[qs.get("id")]) st.id=qs.get("id");
+  else if(qs.get("id")){ preset("notfound"); return; }
+  preset("normal");
+})();
+</script>
+</body>
+</html>

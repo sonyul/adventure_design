@@ -1,0 +1,9 @@
+# News-bwa trial script - pinned packages (checked on PyPI 2026-10-28)
+# Keep this file ASCII only: pip on Korean Windows reads it as cp949.
+# Install: python -m pip install -r requirements.txt
+feedparser==6.0.14
+requests==2.34.2
+trafilatura==2.3.1
+googlenewsdecoder==0.2.2
+google-genai==2.33.0
+# firebase-admin==7.7.0 is NOT installed here (trial run does not use Firestore).

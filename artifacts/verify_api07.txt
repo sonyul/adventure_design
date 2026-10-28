@@ -1,0 +1,207 @@
+﻿2026-10-28 16:26:05 START
+--- python / pinned packages ---
+Python 3.13.2
+feedparser==6.0.14
+google-genai==2.33.0
+googlenewsdecoder==0.2.2
+requests==2.34.2
+trafilatura==2.3.1
+--- test count (def test_) ---
+test_ai_tasks.py: 32
+test_flow.py: 6
+--- unittest (all, verbose) ---
+test_49_copy_allowed (test_ai_tasks.TestCopyCheck.test_49_copy_allowed) ... ok
+
+test_50_copy_detected (test_ai_tasks.TestCopyCheck.test_50_copy_detected) ... ok
+
+test_empty_sources (test_ai_tasks.TestCopyCheck.test_empty_sources) ... ok
+
+test_whitespace_ignored (test_ai_tasks.TestCopyCheck.test_whitespace_ignored) ... ok
+
+test_doc_blocks_equal_files (test_ai_tasks.TestDocMatchesPromptFiles.test_doc_blocks_equal_files) ... ok
+
+test_cut_40 (test_ai_tasks.TestHook.test_cut_40) ... ok
+
+test_empty_uses_title (test_ai_tasks.TestHook.test_empty_uses_title) ... ok
+
+test_exactly_40_not_cut (test_ai_tasks.TestHook.test_exactly_40_not_cut) ... ok
+
+test_spaces_collapsed (test_ai_tasks.TestHook.test_spaces_collapsed) ... ok
+
+test_array_is_failure (test_ai_tasks.TestJsonParse.test_array_is_failure) ... ok
+
+test_code_fence_is_unwrapped (test_ai_tasks.TestJsonParse.test_code_fence_is_unwrapped) ... ok
+
+test_not_json_is_failure (test_ai_tasks.TestJsonParse.test_not_json_is_failure) ... ok
+
+test_examples_draft_15 (test_ai_tasks.TestPromptsAndKey.test_examples_draft_15) ... ok
+
+test_no_key_message (test_ai_tasks.TestPromptsAndKey.test_no_key_message) ... ok
+
+test_placeholder_filled (test_ai_tasks.TestPromptsAndKey.test_placeholder_filled) ... ok
+
+test_write_article_retry_once_then_success (test_ai_tasks.TestTasksRetry.test_write_article_retry_once_then_success) ... ok
+
+test_write_article_two_failures_skip (test_ai_tasks.TestTasksRetry.test_write_article_two_failures_skip) ... ok
+
+test_copy_fails (test_ai_tasks.TestValidateArticle.test_copy_fails) ... ok
+
+test_empty_hook_uses_title (test_ai_tasks.TestValidateArticle.test_empty_hook_uses_title) ... ok
+
+test_length_warning (test_ai_tasks.TestValidateArticle.test_length_warning) ... ok
+
+test_missing_field_fails (test_ai_tasks.TestValidateArticle.test_missing_field_fails) ... ok
+
+test_ok_and_rules (test_ai_tasks.TestValidateArticle.test_ok_and_rules) ... ok
+
+test_too_short_fails (test_ai_tasks.TestValidateArticle.test_too_short_fails) ... ok
+
+test_words_max_5 (test_ai_tasks.TestValidateArticle.test_words_max_5) ... ok
+
+test_words_not_list_ok (test_ai_tasks.TestValidateArticle.test_words_not_list_ok) ... ok
+
+test_groups (test_ai_tasks.TestValidatePickGroupsNotify.test_groups) ... ok
+
+test_groups_invalid (test_ai_tasks.TestValidatePickGroupsNotify.test_groups_invalid) ... ok
+
+test_groups_pick_missing (test_ai_tasks.TestValidatePickGroupsNotify.test_groups_pick_missing) ... ok
+
+test_notify (test_ai_tasks.TestValidatePickGroupsNotify.test_notify) ... ok
+
+test_other_lines (test_ai_tasks.TestValidatePickGroupsNotify.test_other_lines) ... ok
+
+test_pick (test_ai_tasks.TestValidatePickGroupsNotify.test_pick) ... ok
+
+test_pick_empty_fails (test_ai_tasks.TestValidatePickGroupsNotify.test_pick_empty_fails) ... ok
+
+test_clean_naver (test_flow.TestCollectHelpers.test_clean_naver) ... ok
+
+test_press_from_url (test_flow.TestCollectHelpers.test_press_from_url) ... ok
+
+test_rss_description_list (test_flow.TestCollectHelpers.test_rss_description_list) ... ok
+
+test_window_and_dedupe (test_flow.TestCollectHelpers.test_window_and_dedupe) ... ok
+
+test_with_fake_ai (test_flow.TestMainFlow.test_with_fake_ai) ... ok
+
+test_without_key_stops_kindly (test_flow.TestMainFlow.test_without_key_stops_kindly) ... ok
+
+
+
+----------------------------------------------------------------------
+
+Ran 38 tests in 0.091s
+
+
+
+OK
+
+[exit code] 0
+--- real run: main.py (no Gemini/Naver keys) ---
+뉴스 봐 시험 실행 20261028-1626 / 모델 gemini-3.1-flash-lite / Gemini 키 없음 / 네이버 키 없음
+
+
+
+== 1 오늘의 화제 RSS 모으기 ==
+
+   후보 묶음 5개, 기사 25개
+
+   (1.2초)
+
+
+
+== 2 오늘의 화제 고르기(AI T1) ==
+
+   고른 묶음: ['대법원장 국정조사에 오세훈 “항소심 무죄 화풀', '진보정당, 이 대통령 이주노동자 발언 비판‥"', '李, ‘농지조사는 장관 제안’ 논란에 “칭찬 ']
+
+   (0.0초)
+
+
+
+== 4 구글 링크 해독 + 본문 추출 ==
+
+  [today] 대법원장 국정조사에 오세훈 “항소심 무죄 화풀이 하려는 것” 비판
+
+   - ok            839자  경향신문         대법원장 국정조사에 오세훈 “항소심 무죄 화풀이 하려는 것” 비판
+
+   - ok           1053자  KBS 뉴스       정점식 “민주당, 조희대에 ‘스토킹’ 폭력…‘학폭 민주당’ 전원 퇴학시켜
+
+   - ok           1616자  동아일보         “조희대 국조-탄핵 동시에” 목소리 높이는 與강경파
+
+   - ok           2220자  머니투데이        사상 초유 '대법원장 국정조사' 카드꺼낸 與, 野의 셈법은 - 머니투데이
+
+   - ok            537자  로이슈          민주당, ‘조희대 국조’ 12월초 추진 예고... "국조 12월 초 진행
+
+  [today] 진보정당, 이 대통령 이주노동자 발언 비판‥"명백히 부적절"
+
+   - ok            713자  MBC 뉴스       진보정당, 이 대통령 이주노동자 발언 비판‥"명백히 부적절"
+
+   - ok           1083자  문화일보         李대통령 “외국인노동자, 국가경제 크게 도움 안된다”
+
+   - ok           2077자  경향신문         이 대통령 ‘외국인노동자 경제에 크게 도움 안 돼’ 발언 논란…전문가들 
+
+   - ok           1360자  KBS 뉴스       이 대통령 “국내경제 더 크게 도움되는 내국인 고용 늘려야”
+
+   - ok           2927자  OhmyNews     이주노동자의 송금보다 대통령의 말이 문제다
+
+  [today] 李, ‘농지조사는 장관 제안’ 논란에 “칭찬 삼아 한 말, 언론이 문제”
+
+   - empty           0자  조선일보         李, ‘농지조사는 장관 제안’ 논란에 “칭찬 삼아 한 말, 언론이 문제”
+
+   - ok            939자  경향신문         이 대통령 “짜장면 좋다는 건 짬뽕 폄훼···대통령 욕하는 게 국민스포츠
+
+   - too_short       0자  뉴스1          국민의례하는 이재명 대통령
+
+   - ok           1069자  동아일보         李, ‘농지조사 책임전가’ 비판에 “칭찬 삼아 ‘장관 제안’ 밝힌 것”
+
+   - too_short       0자  대한민국 정책브리핑   2026년도 제46회 국무회의 - 포토 | 멀티미디어
+
+   (56.46초)
+
+
+
+Gemini API 키가 없어 AI 단계를 건너뜁니다.
+
+  1) https://aistudio.google.com/apikey 에서 구글 계정으로 키를 발급받으세요 (무료, 카드 등록 없음).
+
+  2) PowerShell 에서:  $env:GEMINI_API_KEY = "발급받은_키"
+
+  3) 다시 실행:        .\.venv\Scripts\python.exe main.py
+
+  (키는 이 창을 닫으면 사라집니다. 파일·코드에 적지 마세요.)
+
+  [경고] AI_KEY_MISSING 시험 실행 전용 경고
+
+
+
+모으기·추출 결과만 저장했습니다:
+
+  C:\Users\Sonyul\adventure_design\script\sample_output\run_20261028-1626.json
+
+  C:\Users\Sonyul\adventure_design\script\sample_output\run_20261028-1626.md
+
+[exit code] 2
+--- key leak check (AIza pattern in script/, excluding .venv) ---
+AIza matches: 0
+--- sample_output files ---
+.gitkeep 0
+run_20261028-1618.json 14137
+run_20261028-1618.md 5301
+run_20261028-1626.json 14308
+run_20261028-1626.md 5255
+2026-10-28 16:27:09 END
+--- post-build doc check (doc rebuilt with test summary) ---
+test_doc_blocks_equal_files (tests.test_ai_tasks.TestDocMatchesPromptFiles.test_doc_blocks_equal_files) ... ok
+
+
+
+----------------------------------------------------------------------
+
+Ran 1 test in 0.019s
+
+
+
+OK
+
+[exit code] 0
+2026-10-28 16:27:40 END2

@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S01 분야 선택 - 뉴스 봐 목업</title>
+<!--
+  뉴스 봐 목업 S01 분야 선택 (근거: docs/design/04_화면설계서.md v1.3 4장 S01, 3장 흐름 요약, 7장)
+  - 자기완결형 단일 HTML. 외부 CDN·웹폰트 없음(시스템 글꼴).
+  - ✅ 확정값 반영(v1.2): Q2 나중에 고르기(누르면 저장 없이 바로 S02), Q6 다시 고르기 모드(완료 → M9 안내 후 S04, 취소 → 바로 S04, 권한 창 생략),
+    Q8 단계 세부(단계 표시·질문 문구·2열·다음 버튼·비활성·값 유지·키워드 숨김).
+  - 첫 실행 모드 완료 → SYS-1 알림 권한 창(안드로이드 시스템 창 모양) → 어느 쪽을 눌러도 S02(허용 안함이면 M8 배너).
+  - 분야 목록은 02_기획서.md 3-1 분야 표를 따름. 검색 키워드는 화면에 보이지 않음.
+  - 왼쪽 노란 점선 상자는 "목업 전용 컨트롤"로 실제 앱 화면이 아님. ?demo=1 이면 숨김(발표 모드).
+-->
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#FFFFFF; --surface:#F6F7F9; --line:#E4E7EC; --text:#14171C; --text2:#3E4450; --muted:#5B6270;
+  --accent:#1D4ED8; --accent-weak:#EEF3FE; --accent-line:#BFD0F8;
+  --warn-bg:#FFF4E0; --warn-text:#6B4100; --warn-line:#F2D49B; --err-text:#B42318;
+  --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+html,body{margin:0}
+body{background:#DDE1E7;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+button{font-family:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 16px 40px;flex-wrap:wrap}
+/* ---------- 목업 전용 컨트롤 (실제 앱 아님) ---------- */
+.mock{width:280px;flex:0 0 auto;background:#1F2329;color:#EDEFF3;border:2px dashed #F5B942;border-radius:14px;padding:16px;font-size:14px;line-height:1.5}
+.mock .badge{display:inline-block;background:#F5B942;color:#1F2329;font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+.mock h1{font-size:16px;margin:10px 0 2px}
+.mock p.sub{margin:0 0 4px;color:#B8BEC9;font-size:13px}
+.mock h2{font-size:13px;color:#F5B942;margin:16px 0 8px;font-weight:700}
+.mock .opts{display:flex;flex-direction:column;gap:6px}
+.mock button.opt{min-height:40px;text-align:left;padding:8px 12px;background:#2C323B;color:#EDEFF3;border:1px solid #444C58;border-radius:8px;cursor:pointer;font-size:13.5px}
+.mock button.opt:hover{border-color:#8A93A3}
+.mock button.opt[aria-pressed="true"]{background:#F5B942;color:#1F2329;border-color:#F5B942;font-weight:700}
+.mock label.chk{display:flex;gap:8px;align-items:center;min-height:36px;cursor:pointer;font-size:13.5px}
+.mock label.chk input{width:18px;height:18px}
+.mock .nav{display:flex;flex-wrap:wrap;gap:6px}
+.mock .nav a{color:#EDEFF3;font-size:12.5px;padding:6px 8px;border:1px solid #444C58;border-radius:6px;text-decoration:none}
+.mock .nav a.cur{background:#3A414C;border-color:#8A93A3}
+.mock .note{font-size:12px;color:#B8BEC9;margin-top:14px;border-top:1px solid #3A414C;padding-top:10px}
+.demo .mock{display:none}
+.demo .stage{padding-top:12px;padding-bottom:12px}
+.homelink{font-size:12.5px;color:#3E4450}
+/* ---------- 휴대폰 프레임 ---------- */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{position:relative;width:380px;height:800px;background:#111;border-radius:44px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;background:var(--bg);border-radius:34px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{flex:0 0 32px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:12.5px;color:var(--text2);font-weight:600}
+.appbar{flex:0 0 56px;display:flex;align-items:center;gap:4px;padding:0 6px 0 4px}
+.appbar .title{font-size:17px;font-weight:700;flex:1;padding-left:4px}
+.iconbtn{min-width:48px;min-height:48px;border:0;background:transparent;border-radius:24px;font-size:16px;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:0 12px}
+.iconbtn:hover{background:var(--surface)}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.gesture{flex:0 0 22px;display:flex;align-items:center;justify-content:center}
+.gesture span{width:110px;height:4px;border-radius:2px;background:#C9CED6}
+.caption{font-size:12.5px;color:#3E4450;text-align:center;max-width:380px;margin:0}
+.snack{position:absolute;left:14px;right:14px;bottom:36px;background:#23272E;color:#fff;border-radius:10px;padding:14px 16px;font-size:14.5px;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.25);transform:translateY(20px);opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.snack.show{transform:none;opacity:1}
+.flow{position:absolute;inset:0;background:rgba(20,23,28,.55);display:none;align-items:center;justify-content:center;padding:22px;z-index:60}
+.flow.show{display:flex}
+.flow .card{background:#fff;border:2px dashed #E0A019;border-radius:14px;padding:20px;width:100%}
+.flow .tag{font-size:12px;font-weight:700;color:#6B4100;background:#FFF1D0;display:inline-block;padding:2px 8px;border-radius:6px}
+.flow h3{font-size:17px;margin:12px 0 6px;line-height:1.4}
+.flow p{font-size:14px;color:var(--text2);margin:0 0 16px;line-height:1.55}
+.flow .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+/* SYS-1 알림 권한 창 (안드로이드가 띄우는 시스템 창 모양) */
+.perm{position:absolute;inset:0;background:rgba(20,23,28,.5);display:none;align-items:center;justify-content:center;padding:26px;z-index:60}
+.perm.show{display:flex}
+.perm .dlg{background:#F3F5FB;border-radius:28px;padding:24px 22px 14px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.perm .bell{width:40px;height:40px;margin:0 auto 14px;border-radius:50%;background:#DCE4FA;display:flex;align-items:center;justify-content:center;font-size:20px}
+.perm h3{font-size:19px;font-weight:600;line-height:1.45;margin:0 0 20px;color:#1B1D22}
+.perm .pbtn{display:block;width:100%;min-height:52px;border:0;border-radius:26px;background:#DCE4FA;color:#173A9C;font-size:15.5px;font-weight:600;cursor:pointer;margin-top:6px}
+.perm .pbtn:hover{filter:brightness(.97)}
+.btn{min-height:52px;border-radius:12px;border:0;font-size:16px;font-weight:700;padding:0 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1A43BE}
+.btn-primary:disabled{background:#D9DEE7;color:#5B6270;cursor:not-allowed}
+.btn-line{background:#fff;color:var(--accent);border:1.5px solid var(--accent-line)}
+.btn-text{background:transparent;color:var(--accent);min-height:48px;font-weight:600;font-size:15px}
+.spinner{width:22px;height:22px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ---------- S01 전용 ---------- */
+.steps{padding:4px 24px 0}
+.steps .num{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.5px}
+.steps .bars{display:flex;gap:6px;margin-top:8px}
+.steps .bars i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.steps .bars i.on{background:var(--accent)}
+.q{padding:22px 24px 6px}
+.q h1{font-size:23px;line-height:1.38;margin:0;letter-spacing:-.3px;word-break:keep-all}
+.q p{margin:10px 0 0;font-size:14px;color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px 24px 24px}
+.choice{position:relative;min-height:56px;border:1.5px solid var(--line);background:#fff;border-radius:12px;font-size:16px;font-weight:600;color:var(--text);cursor:pointer;padding:8px 12px;text-align:left;line-height:1.3}
+.choice:hover{border-color:#AEB6C3}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-weak);color:#163A9E}
+.choice[aria-pressed="true"]::after{content:"✓";position:absolute;right:12px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--accent)}
+.choice:disabled{background:var(--surface);color:#8A919C;border-style:dashed;cursor:not-allowed}
+.choice small{display:block;font-size:12px;font-weight:500;color:#6B7280;margin-top:2px}
+.alert{margin:0 24px 16px;padding:14px 16px;border-radius:12px;background:#FDECEA;border:1px solid #F5C2BC;color:#7A1A12;font-size:14.5px;line-height:1.5}
+.alert .row{display:flex;justify-content:flex-end;margin-top:8px}
+.alert .btn{min-height:44px;font-size:14.5px;padding:0 14px;background:#fff;color:var(--err-text);border:1.5px solid #E7A39B}
+.foot{flex:0 0 auto;padding:10px 24px 6px;display:flex;flex-direction:column;align-items:stretch;gap:2px;background:#fff}
+@media (max-width:440px){
+  .stage{padding:12px 0 24px}
+  .mock{width:calc(100% - 32px)}
+  .phone{width:100%;max-width:380px;height:760px;border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+/* 시연 모드: ?demo=1 이면 목업 설명 패널을 숨기고, 화면 사이 이동에 demo=1을 이어 붙인다. 노트북 화면 높이에 맞춰 휴대폰을 줄인다. */
+(function(){
+  var demo=new URLSearchParams(location.search).get("demo")==="1";
+  if(demo) document.documentElement.classList.add("demo");
+  window.nbGo=function(u){ if(demo && !/[?&]demo=1/.test(u)) u+=(u.indexOf("?")<0?"?":"&")+"demo=1"; location.href=u; };
+  document.addEventListener("click",function(e){
+    if(!demo||e.defaultPrevented) return;
+    var a=e.target.closest&&e.target.closest("a[href]"); if(!a||a.target) return;
+    var h=a.getAttribute("href"); if(!/\.html(\?|#|$)/.test(h)) return;
+    e.preventDefault(); window.nbGo(h);
+  });
+  function fit(){
+    var w=document.querySelector(".phone-wrap"); if(!w) return;
+    w.style.zoom=1; if(window.innerWidth<=440) return;
+    var s=Math.min(1,Math.max(.55,(window.innerHeight-(demo?60:100))/w.offsetHeight)); w.style.zoom=s;
+  }
+  window.addEventListener("resize",fit); document.addEventListener("DOMContentLoaded",fit);
+})();
+</script>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===== 목업 전용 컨트롤 (실제 앱 화면 아님) ===== -->
+  <aside class="mock" aria-label="목업 전용 상태 보기 컨트롤">
+    <span class="badge">목업 전용 · 앱 화면 아님</span>
+    <h1>S01 분야 선택</h1>
+    <p class="sub">상태 보기 버튼을 누르면 오른쪽 휴대폰 화면이 그 상태로 바뀝니다. 휴대폰 화면 안 버튼도 실제로 눌러 볼 수 있어요.</p>
+
+    <h2>상태 보기</h2>
+    <div class="opts" id="presets">
+      <button class="opt" data-p="s1">① 1순위 큰 분야 (첫 실행)</button>
+      <button class="opt" data-p="s2">② 깊은 분야 (과학 선택)</button>
+      <button class="opt" data-p="s3">③ 2순위 큰 분야 (과학 흐리게)</button>
+      <button class="opt" data-p="s3done">③ 고른 뒤 완료 직전 (경제)</button>
+      <button class="opt" data-p="saving">완료 누름 · 저장 중…</button>
+      <button class="opt" data-p="fail">저장 실패 안내 (M2)</button>
+      <button class="opt" data-p="redo">다시 고르기 모드 (미리 선택됨)</button>
+      <button class="opt" data-p="perm">완료 직후 알림 권한 창 (SYS-1)</button>
+    </div>
+
+    <h2>흉내 내기</h2>
+    <label class="chk"><input type="checkbox" id="simFail"> 완료 시 저장 실패 (인터넷 끊김)</label>
+    <div class="opts"><button class="opt" id="hwBack">휴대폰 뒤로 가기 버튼</button></div>
+
+    <h2>다른 화면</h2>
+    <nav class="nav" aria-label="목업 화면 이동">
+      <a href="index.html">시연 시작</a>
+      <a href="00_알림.html">SYS-2 알림</a>
+      <a href="01_분야선택.html" class="cur">S01 분야 선택</a>
+      <a href="02_뉴스목록.html">S02 뉴스 목록</a>
+      <a href="03_종합기사.html">S03 종합 기사</a>
+      <a href="04_설정.html">S04 설정</a>
+    </nav>
+    <p class="note">근거: 04_화면설계서 v1.3 S01. 나중에 고르기(Q2), 다시 고르기 모드(Q6), 단계 표시·질문 문구·2열 배치·다음 버튼(Q8)은 모두 확정값입니다. 다시 고르기 모드에서 완료하면 설정(S04)으로 돌아가요.</p>
+  </aside>
+
+  <!-- ===== 휴대폰 ===== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen">
+        <div class="statusbar" aria-hidden="true"><span>7:03</span><span>▼ ▲ ▮</span></div>
+        <header class="appbar">
+          <span id="leftSlot"></span>
+          <span class="title" id="barTitle"></span>
+        </header>
+
+        <main class="body" id="main">
+          <div class="steps">
+            <div class="num" id="stepNum">1 / 3</div>
+            <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <div class="q">
+            <h1 id="question"></h1>
+            <p id="helper"></p>
+          </div>
+          <div class="grid" id="grid" role="group" aria-labelledby="question"></div>
+          <div class="alert" id="alert" role="alert" hidden>
+            저장하지 못했어요. 인터넷 연결 후 다시 시도해 주세요
+            <div class="row"><button class="btn" id="retry">다시 시도</button></div>
+          </div>
+        </main>
+
+        <div class="foot">
+          <button class="btn btn-primary" id="nextBtn" disabled>다음</button>
+          <button class="btn btn-text" id="skipBtn">나중에 고르기</button>
+        </div>
+        <div class="gesture" aria-hidden="true"><span></span></div>
+
+        <div class="snack" id="snack" role="status" aria-live="polite"></div>
+        <!-- SYS-1: 안드로이드 13 이상에서 안드로이드가 띄우는 알림 권한 창 -->
+        <div class="perm" id="perm" role="dialog" aria-modal="true" aria-labelledby="permTitle">
+          <div class="dlg">
+            <div class="bell" aria-hidden="true">🔔</div>
+            <h3 id="permTitle">‘뉴스 봐’에서 알림을 보내도록 허용하시겠습니까?</h3>
+            <button type="button" class="pbtn" id="permAllow">허용</button>
+            <button type="button" class="pbtn" id="permDeny">허용 안함</button>
+          </div>
+        </div>
+        <div class="flow" id="flow" role="dialog" aria-modal="true" aria-labelledby="flowTitle">
+          <div class="card">
+            <span class="tag" id="flowTag"></span>
+            <h3 id="flowTitle"></h3>
+            <p id="flowText"></p>
+            <div class="acts" id="flowActs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">휴대폰 세로 화면 목업 (가로 360px 기준)</p>
+    <a class="homelink" href="index.html">시연 시작 페이지로</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var BIG=["정치","경제","사회","세계","IT·컴퓨터","과학","자연·환경","문화·연예","스포츠","생활·건강"];
+  var DEEP={
+    "정치":["대통령·정부","국회·정당","선거","북한","외교·국방"],
+    "경제":["금융·증권","부동산","산업·기업","취업·창업","생활경제"],
+    "사회":["사건·사고","교육","노동","법·재판","복지·인권"],
+    "세계":["미국","중국·일본","유럽","분쟁·중동","국제기구·외교"],
+    "IT·컴퓨터":["인공지능","보안·해킹","모바일·기기","인터넷·플랫폼","반도체","게임"],
+    "과학":["우주","생명과학","물리·화학","로봇·공학","에너지"],
+    "자연·환경":["기후변화","날씨·재난","동물·생태","환경오염"],
+    "문화·연예":["영화·드라마","음악","책·전시","여행"],
+    "스포츠":["축구","야구","농구·배구","국제대회"],
+    "생활·건강":["건강·의학","음식","패션·뷰티","육아·반려동물"]
+  };
+  var st={mode:"first",step:1,s1:null,s2:null,s3:null,saving:false,fail:false};
+  var $=function(id){return document.getElementById(id);};
+
+  function render(){
+    // 상단 바
+    var left=$("leftSlot"); left.innerHTML="";
+    if(st.step>1){
+      left.appendChild(mkBtn("‹ 이전","iconbtn",function(){go(st.step-1);},"이전 단계"));
+    }else if(st.mode==="redo"){
+      left.appendChild(mkBtn("✕ 취소","iconbtn",cancelRedo,"취소하고 설정으로 돌아가기"));
+    }else{
+      var sp=document.createElement("span"); sp.style.display="inline-block"; sp.style.width="16px"; left.appendChild(sp);
+    }
+    $("barTitle").textContent = st.mode==="redo" ? (st.empty ? "관심 분야 고르기" : "관심 분야 다시 고르기") : "";
+
+    // 단계 표시
+    $("stepNum").textContent=st.step+" / 3";
+    var bars=document.querySelectorAll(".steps .bars i");
+    for(var i=0;i<bars.length;i++){bars[i].className = i<st.step ? "on" : "";}
+
+    // 질문 문구
+    var q,h;
+    if(st.step===1){q="가장 좋아하는 분야를 하나 골라 주세요"; h="고른 분야의 뉴스를 ‘나의 관심 분야’에 모아 드려요.";}
+    else if(st.step===2){q=st.s1+" 안에서 더 궁금한 주제는요?"; h="1순위 분야: "+st.s1+" · 하나만 고를 수 있어요.";}
+    else {q="두 번째로 관심 있는 분야도 골라 주세요"; h="고른 분야의 뉴스를 ‘추천 뉴스’에 모아 드려요.";}
+    $("question").textContent=q; $("helper").textContent=h;
+
+    // 선택지
+    var grid=$("grid"); grid.innerHTML="";
+    var list = st.step===2 ? (DEEP[st.s1]||[]) : BIG;
+    var cur = st.step===1 ? st.s1 : st.step===2 ? st.s2 : st.s3;
+    list.forEach(function(name){
+      var b=document.createElement("button");
+      b.className="choice"; b.type="button";
+      b.textContent=name;
+      var dis = (st.step===3 && name===st.s1);
+      if(dis){ b.disabled=true; var sm=document.createElement("small"); sm.textContent="1순위로 골랐어요"; b.appendChild(sm); }
+      b.setAttribute("aria-pressed", String(name===cur && !dis));
+      b.addEventListener("click",function(){ pick(name); });
+      grid.appendChild(b);
+    });
+
+    // 오류
+    $("alert").hidden=!st.fail;
+
+    // 하단 버튼
+    var nb=$("nextBtn");
+    nb.innerHTML="";
+    if(st.saving){
+      var s=document.createElement("span"); s.className="spinner"; s.setAttribute("aria-hidden","true");
+      nb.appendChild(s); nb.appendChild(document.createTextNode("저장 중…")); nb.disabled=true;
+    }else{
+      nb.textContent = st.step===3 ? "완료" : "다음";
+      nb.disabled = !cur;
+    }
+    $("skipBtn").hidden = !(st.mode==="first" && st.step===1);
+  }
+
+  function mkBtn(txt,cls,fn,label){var b=document.createElement("button");b.className=cls;b.type="button";b.textContent=txt;if(label)b.setAttribute("aria-label",label);b.addEventListener("click",fn);return b;}
+
+  function pick(name){
+    if(st.saving) return;
+    if(st.step===1){
+      if(st.s1!==name){ st.s1=name; st.s2=null; if(st.s3===name) st.s3=null; }
+    }else if(st.step===2){ st.s2=name; }
+    else { st.s3=name; }
+    st.fail=false; render();
+  }
+  function go(n){ st.step=n; st.fail=false; st.saving=false; render(); $("main").scrollTop=0; }
+
+  $("nextBtn").addEventListener("click",function(){
+    if(st.step<3){ go(st.step+1); return; }
+    save();
+  });
+  $("retry").addEventListener("click",save);
+  // 나중에 고르기 (Q2): 저장하지 않고 바로 S02. 오늘의 화제만 내용이 있음
+  $("skipBtn").addEventListener("click",function(){ window.nbGo("02_뉴스목록.html?state=nofield"); });
+
+  var saveTimer=null;
+  function save(){
+    st.saving=true; st.fail=false; render();
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(function(){
+      st.saving=false;
+      if($("simFail").checked){ st.fail=true; render(); return; }
+      render(); done();
+    },1100);
+  }
+  function done(){
+    if(st.mode==="first"){ showPerm(); }
+    else{
+      // 다시 고르기 완료 (Q6): M9 안내와 함께 설정(S04)으로 돌아감. 권한 창은 다시 띄우지 않음
+      window.nbGo("04_설정.html?saved=1");
+    }
+  }
+  function showPerm(){ $("perm").classList.add("show"); setTimeout(function(){$("permAllow").focus();},30); }
+  $("permAllow").addEventListener("click",function(){ window.nbGo("02_뉴스목록.html"); });
+  $("permDeny").addEventListener("click",function(){ window.nbGo("02_뉴스목록.html?notif=denied"); });
+  // 다시 고르기 취소 (Q6): 저장하지 않고 이전 분야 유지, 바로 S04
+  function cancelRedo(){ window.nbGo("04_설정.html"); }
+
+  // 휴대폰 뒤로 가기 흉내
+  $("hwBack").addEventListener("click",function(){
+    if($("flow").classList.contains("show")){ hideFlow(); return; }
+    if(st.step>1){ go(st.step-1); return; }
+    if(st.mode==="redo"){ cancelRedo(); return; }
+    showFlow("흐름 안내 (목업 전용)","앱이 닫혀요 (저장하지 않음)","다음에 앱을 실행하면 분야 선택 1단계부터 다시 시작해요.",
+      [{t:"처음 상태로",fn:function(){hideFlow();preset("s1");},c:"btn-primary"}]);
+  });
+
+  // 공통: 스낵바·흐름 안내
+  var snackT=null;
+  function snack(msg){var s=$("snack");s.textContent=msg;s.classList.add("show");clearTimeout(snackT);snackT=setTimeout(function(){s.classList.remove("show");},2600);}
+  function showFlow(tag,title,text,acts){
+    $("flowTag").textContent=tag;$("flowTitle").textContent=title;$("flowText").textContent=text;
+    var a=$("flowActs");a.innerHTML="";
+    acts.forEach(function(x){
+      var el;
+      if(x.href){el=document.createElement("a");el.href=x.href;}
+      else{el=document.createElement("button");el.type="button";el.addEventListener("click",x.fn);}
+      el.className="btn "+x.c; el.textContent=x.t; a.appendChild(el);
+    });
+    $("flow").classList.add("show");
+    var f=a.querySelector(".btn"); if(f) f.focus();
+  }
+  function hideFlow(){$("flow").classList.remove("show");}
+
+  // 상태 보기 프리셋
+  function preset(p){
+    clearTimeout(saveTimer); hideFlow(); $("perm").classList.remove("show");
+    st={mode:"first",step:1,s1:null,s2:null,s3:null,saving:false,fail:false};
+    if(p==="s2"){st.s1="과학";st.step=2;}
+    if(p==="s3"){st.s1="과학";st.s2="우주";st.step=3;}
+    if(p==="s3done"||p==="saving"||p==="fail"||p==="perm"){st.s1="과학";st.s2="우주";st.s3="경제";st.step=3;}
+    if(p==="saving"){st.saving=true;}
+    if(p==="fail"){st.fail=true;}
+    if(p==="redo"){st.mode="redo";st.s1="과학";st.s2="우주";st.s3="경제";}
+    if(p==="redoEmpty"){st.mode="redo";st.empty=true;}
+    render();
+    if(p==="perm") showPerm();
+    var btns=document.querySelectorAll("#presets .opt");
+    for(var i=0;i<btns.length;i++) btns[i].setAttribute("aria-pressed",String(btns[i].getAttribute("data-p")===p));
+  }
+  document.getElementById("presets").addEventListener("click",function(e){
+    var b=e.target.closest(".opt"); if(b) preset(b.getAttribute("data-p"));
+  });
+
+  // 다른 목업에서 넘어온 경우 (?mode=redo, &empty=1)
+  var qs=new URLSearchParams(location.search);
+  if(qs.get("mode")==="redo") preset(qs.get("empty")==="1" ? "redoEmpty" : "redo");
+  else preset("s1");
+})();
+</script>
+</body>
+</html>

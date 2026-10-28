@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>뉴스 봐 — 아이디어 발표</title>
+<style>
+  :root{
+    --bg:#eef1f6;
+    --paper:#ffffff;
+    --ink:#1a2233;
+    --sub:#5b6577;
+    --line:#e2e6ee;
+    --accent:#ff6a2b;
+    --accent-soft:#fff1ea;
+    --navy:#1f3a68;
+    --navy-soft:#e9effa;
+    --green:#1f9d6b;
+    --green-soft:#e6f6ef;
+    --red:#d64545;
+    --red-soft:#fdeaea;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#1b2130;overflow:hidden}
+  body{font-family:"Pretendard","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:var(--ink);word-break:keep-all}
+
+  /* 16:9 무대 — 화면 크기에 맞춰 확대/축소 */
+  #stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center}
+  .slide{position:absolute;inset:0;background:var(--paper);border-radius:6px;padding:44px 64px 52px;display:none;flex-direction:column;overflow:hidden}
+  .slide:has(.src){padding-bottom:76px}
+  .slide.active{display:flex;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* 공통 요소 */
+  .kicker{font-size:17px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:8px}
+  h1{font-size:40px;line-height:1.3;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:36px;line-height:1.3;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+  .lead{font-size:21px;color:var(--sub);line-height:1.5;margin-bottom:20px}
+  .hl{color:var(--accent)}
+  .navy{color:var(--navy)}
+  .src{position:absolute;left:64px;right:150px;bottom:16px;font-size:14px;color:#7d879a;line-height:1.45}
+  .pageno{position:absolute;right:64px;bottom:16px;font-size:15px;color:#7d879a;font-weight:700}
+  .brand{position:absolute;right:64px;top:20px;font-size:15px;color:#a2aab8;font-weight:700}
+  .brand b{color:var(--accent)}
+  .grid{display:grid;gap:16px}
+  .card{background:#f7f9fc;border:1px solid var(--line);border-radius:14px;padding:18px 22px}
+  .card h3{font-size:23px;margin-bottom:8px;font-weight:800}
+  .card p,.card li{font-size:18.5px;line-height:1.55;color:#2f3949}
+  .tag{display:inline-block;font-size:15px;font-weight:800;padding:3px 11px;border-radius:999px;background:var(--navy-soft);color:var(--navy);margin-bottom:10px}
+  .tag.or{background:var(--accent-soft);color:var(--accent)}
+  .tag.gr{background:var(--green-soft);color:var(--green)}
+  .tag.rd{background:var(--red-soft);color:var(--red)}
+  .msg{margin-top:auto;background:var(--navy);color:#fff;border-radius:14px;padding:15px 24px;font-size:21px;font-weight:700;line-height:1.45}
+  .msg b{color:#ffb38f}
+  table{border-collapse:collapse;width:100%}
+  th,td{font-size:19.5px;padding:11px 16px;border-bottom:1px solid var(--line);text-align:left;line-height:1.4}
+  th{background:#f3f5f9;font-weight:800;color:#3a4456}
+  table.big th,table.big td{font-size:23px;padding:17px 18px;line-height:1.45}
+  table.big td:first-child{text-align:center;font-size:28px;color:var(--accent)}
+
+  /* 표지 */
+  .cover{background:linear-gradient(135deg,#1f3a68 0%,#13264a 100%);color:#fff;justify-content:center}
+  .cover .kicker{color:#ffb38f}
+  .cover h1{font-size:76px;margin-bottom:14px}
+  .cover h1 span{color:var(--accent)}
+  .cover .sub{font-size:26px;line-height:1.5;color:#d5def0;margin-bottom:48px}
+  .cover .meta{font-size:19px;color:#b3c1db;line-height:1.7}
+  .cover .bubble{position:absolute;right:80px;top:160px;width:380px;background:#fff;color:var(--ink);border-radius:18px;padding:18px 22px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+  .bubble .app{font-size:15px;color:var(--sub);font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px}
+  .bubble .t{font-size:22px;font-weight:800;line-height:1.4}
+  .cover .bubble.b2{top:330px;right:140px;width:360px;opacity:.88}
+  .cover .bubble.b2 .t{font-size:20px}
+
+  /* 목차 */
+  .toc{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:20px}
+  .toc .step{border-radius:16px;padding:24px 22px;background:#f7f9fc;border:1px solid var(--line);position:relative}
+  .toc .num{font-size:44px;font-weight:900;color:var(--accent);line-height:1}
+  .toc .t{font-size:27px;font-weight:800;margin:14px 0 10px}
+  .toc .d{font-size:18.5px;color:#4a5466;line-height:1.55}
+  .toc .step:not(:last-child)::after{content:"→";position:absolute;right:-16px;top:44%;font-size:22px;color:#b9c1cf}
+
+  /* 통계 */
+  .bigstat{font-size:64px;font-weight:900;line-height:1;color:var(--accent);letter-spacing:-.03em}
+  .bigstat small{font-size:26px;font-weight:800}
+  .statlabel{font-size:18.5px;color:#2f3949;line-height:1.5;margin-top:10px}
+  .bar{display:flex;align-items:center;gap:12px;margin:9px 0}
+  .bar .lb{width:250px;font-size:18px;font-weight:700;color:#2f3949;flex:none}
+  .bar .track{flex:1;height:28px;background:#eef1f6;border-radius:6px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:6px;background:#b9c4d8}
+  .bar .fill.k{background:var(--accent)}
+  .bar .v{width:58px;font-size:20px;font-weight:800;text-align:right;flex:none}
+
+  /* 매핑 */
+  .map{display:grid;grid-template-columns:1fr 40px 1.3fr;gap:10px 10px;align-items:stretch}
+  .map .p,.map .s{border-radius:12px;padding:11px 18px;font-size:18px;line-height:1.45}
+  .map .p{background:var(--red-soft);border:1px solid #f4cccc}
+  .map .s{background:var(--green-soft);border:1px solid #c6eadb}
+  .map .p b,.map .s b{display:block;font-size:21px;margin-bottom:2px}
+  .map .ar{display:flex;align-items:center;justify-content:center;font-size:24px;color:#9aa4b5;font-weight:900}
+
+  /* 흐름 + 폰 */
+  .flow{display:flex;gap:22px;align-items:flex-start;margin-top:4px}
+  .phone{width:270px;height:500px;border-radius:34px;background:#111827;padding:11px;flex:none;box-shadow:0 18px 40px rgba(20,30,60,.25)}
+  .screen{width:100%;height:100%;border-radius:24px;background:#f4f6fa;overflow:hidden;position:relative;font-size:14px}
+  .screen.lock{background:linear-gradient(160deg,#3d5a8f,#1a2d52);color:#fff;padding:30px 11px 11px}
+  .lock .time{font-size:56px;font-weight:300;text-align:center;line-height:1}
+  .lock .date{text-align:center;font-size:15px;opacity:.9;margin:6px 0 18px}
+  .noti{background:rgba(255,255,255,.96);color:var(--ink);border-radius:14px;padding:11px 12px;margin-bottom:8px}
+  .noti .h{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);font-weight:700;margin-bottom:4px}
+  .noti .h i{font-style:normal;color:var(--accent)}
+  .noti .b{font-size:16px;font-weight:800;line-height:1.38}
+  .art{padding:14px 13px}
+  .art .bc{font-size:13px;color:var(--accent);font-weight:800}
+  .art .tt{font-size:18px;font-weight:800;line-height:1.3;margin:4px 0 8px}
+  .art .warn{background:#fff6e5;color:#7a4f00;border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.4;margin-bottom:8px}
+  .art p{font-size:14.5px;line-height:1.55;color:#1f2838;margin-bottom:6px}
+  .art u{text-decoration:none;border-bottom:2px dotted var(--accent);font-weight:800}
+  .art sup{color:var(--navy);font-weight:800;font-size:11px}
+  .tip{position:relative;margin:2px 0 8px;background:#1a2233;color:#fff;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 8px 20px rgba(0,0,0,.25)}
+  .tip b{color:#ffb38f}
+  .srcs{position:absolute;left:12px;right:12px;bottom:11px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;color:var(--sub);line-height:1.5}
+  .srcs b{color:var(--ink)}
+  .steps{flex:1;display:flex;flex-direction:column;gap:10px}
+  .steps .st{display:flex;gap:14px;align-items:flex-start;background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:11px 16px}
+  .steps .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:17px}
+  .steps .st div{font-size:18px;line-height:1.45}
+  .steps .st b{font-size:20px}
+  .steps .st .who{font-size:14px;font-weight:800;color:var(--navy);background:var(--navy-soft);border-radius:999px;padding:1px 9px;margin-left:6px}
+
+  /* 아키텍처 */
+  .arch{display:flex;align-items:stretch;gap:10px;margin-top:2px}
+  .arch .box{flex:1;border-radius:14px;padding:14px 16px;border:1.5px solid var(--line);background:#f7f9fc;display:flex;flex-direction:column}
+  .arch .box .tt{font-size:15px;font-weight:800;color:var(--sub);margin-bottom:6px}
+  .arch .box .nm{font-size:21px;font-weight:800;margin-bottom:4px;line-height:1.3}
+  .arch .box p{font-size:16.5px;line-height:1.45;color:#2f3949}
+  .arch .box.ai{border-color:#ffc6ad;background:var(--accent-soft)}
+  .arch .box.app{border-color:#c4d3ee;background:var(--navy-soft)}
+  .arch .arw{display:flex;align-items:center;color:#9aa4b5;font-size:24px;font-weight:900}
+
+  /* 출처 */
+  .refs li{font-size:17.5px;line-height:1.45;margin-bottom:11px;color:#2f3949;list-style:none;padding-left:38px;position:relative}
+  .refs li .i{position:absolute;left:0;top:1px;width:27px;height:27px;border-radius:6px;background:var(--navy-soft);color:var(--navy);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center}
+  .refs a{color:var(--navy);word-break:break-all;font-size:14.5px}
+
+  /* 하단 컨트롤 */
+  #progress{position:fixed;left:0;bottom:0;height:4px;background:var(--accent);transition:width .3s;z-index:5}
+  #hud{position:fixed;right:14px;bottom:12px;display:flex;gap:6px;z-index:6;opacity:.25;transition:opacity .2s}
+  #hud:hover{opacity:1}
+  #hud button{background:#2b3446;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  #notes{position:fixed;left:0;right:0;bottom:4px;background:rgba(15,20,32,.94);color:#e7ecf5;font-size:19px;line-height:1.6;padding:14px 24px;display:none;z-index:7;max-height:30vh;overflow:auto}
+  #notes b{color:#ffb38f}
+  #help{position:fixed;left:14px;bottom:12px;color:#7d879a;font-size:12px;z-index:6}
+  @media print{
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{background:#fff;overflow:visible;height:auto}
+    #stage{position:static;transform:none!important;width:auto;height:auto}
+    .slide{position:relative;display:flex!important;width:1280px;height:720px;break-after:page;border-radius:0;animation:none}
+    .slide:last-child{break-after:auto}
+    .slide.active{animation:none!important}
+    #progress,#hud,#notes,#help{display:none!important}
+    @page{size:1280px 720px;margin:0}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1. 표지 -->
+<section class="slide cover" data-notes="안녕하세요. 저는 '뉴스가 먼저 찾아오는 상식 뉴스 앱', <b>뉴스 봐</b>를 소개하겠습니다. 오른쪽처럼 아침에 이런 알림이 온다면, 한 번쯤 눌러보고 싶지 않으신가요?">
+  <div class="kicker">아이디어 발표 · 어드벤처 디자인</div>
+  <h1>뉴스 <span>봐</span></h1>
+  <div class="sub">찾아보지 않아도 <b style="color:#fff">뉴스가 먼저 찾아오는</b><br>나만의 상식 뉴스 앱</div>
+  <div class="meta">AI가 여러 기사를 한 편으로 묶고,<br>"눌러보고 싶은 한 문장"을 알림으로 보내 드립니다.<br><br>2026. 10.</div>
+  <div class="bubble"><div class="app"><span>📰 뉴스 봐 · 오늘의 화제</span><span>오전 7:00</span></div><div class="t">이번 주 세계 뉴스 요약: 다 망했는데 펭귄만 살아남음</div></div>
+  <div class="bubble b2"><div class="app"><span>📰 뉴스 봐 · 나의 관심 분야</span><span>오후 12:00</span></div><div class="t">우주에서 온 신호, 진짜 외계인일까? 기사 5개로 끝장 정리</div></div>
+</section>
+
+<!-- 2. 목차 -->
+<section class="slide" data-notes="발표는 <b>문제 → 해결 → 결과</b> 순서로 진행합니다. 먼저 제가 느낀 문제를 데이터로 확인하고, 이를 어떻게 해결할지, 그리고 무엇으로 성공을 확인할지 말씀드리겠습니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">CONTENTS</div>
+  <h2>발표 순서</h2>
+  <p class="lead">문제를 데이터로 확인하고, 해결책을 문제마다 하나씩 연결한 뒤, 결과를 어떻게 확인할지 보여 드립니다.</p>
+  <div class="toc">
+    <div class="step"><div class="num">01</div><div class="t">문제 정의</div><div class="d">왜 뉴스를 보고 싶은데<br>안 보게 될까?<br>— 나의 경험 + 통계</div></div>
+    <div class="step"><div class="num">02</div><div class="t">핵심 통찰</div><div class="d">"찾으러 가는" 구조는 실패한다.<br>뉴스가 먼저 와야 한다.</div></div>
+    <div class="step"><div class="num">03</div><div class="t">해결책</div><div class="d">문제 4개 ↔ 기능 4개<br>사용 흐름 · 차별점<br>· 구현 방법</div></div>
+    <div class="step"><div class="num">04</div><div class="t">기대 결과</div><div class="d">확인할 가설<br>성공 기준<br>진행 현황</div></div>
+  </div>
+  <div class="msg">핵심 메시지 — <b>사람들은 뉴스를 찾으러 가지 않는다. 그러니 뉴스가, 재미있는 한 문장으로, 먼저 찾아가야 한다.</b></div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 3. 문제 정의: 나의 경험 -->
+<section class="slide" data-notes="출발점은 제 경험입니다. 상식을 늘리려고 뉴스를 보고 싶은데, 실제로는 찾아보지 않게 됩니다. 이유를 정리하니 네 가지였습니다. 특히 <b>P1 재미없음</b>, <b>P2 내용이 부실하고 흩어짐</b>, <b>P4 찾아보는 행동 자체를 안 함</b>이 가장 컸습니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">01 · 문제 정의</div>
+  <h2>"상식을 늘리고 싶은데, 뉴스를 <span class="hl">안 보게 된다</span>"</h2>
+  <p class="lead">관심 분야는 있지만 전문가는 아니고, 대화에서 뒤처지고 싶지 않은 대학생 — 바로 제 이야기입니다.</p>
+  <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card"><span class="tag rd">P1 · 중요도 ★★★</span><h3>재미가 없다</h3><p>관심 없는 기사가 먼저 보인다. "과학", "컴퓨터"로 분야를 정해도 범위가 너무 넓다.</p></div>
+    <div class="card"><span class="tag rd">P2 · 중요도 ★★★</span><h3>내용이 부실하고 흩어져 있다</h3><p>기사 하나로는 내용이 적거나 결론이 없다. 전체 그림을 보려면 여러 기사를 찾아 다녀야 한다.</p></div>
+    <div class="card"><span class="tag rd">P3 · 중요도 ★★</span><h3>깊이 들어가면 너무 어렵다</h3><p>더 찾아보면 내 수준보다 지나치게 전문적인 글이 나온다.</p></div>
+    <div class="card"><span class="tag rd">P4 · 중요도 ★★★</span><h3>찾아보는 행동 자체를 안 한다</h3><p>검색하면 해결되지만, 귀찮아서 결국 안 하게 된다.</p></div>
+  </div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 4. 근거①: 세계 -->
+<section class="slide" data-notes="이게 저만의 문제일까요? 로이터 저널리즘 연구소가 48개국 약 10만 명을 조사한 <b>디지털 뉴스 리포트 2025</b>를 보면, 열 명 중 네 명이 뉴스를 일부러 피합니다. 이유 1위는 기분이 나빠져서, 2위는 양이 너무 많아 지쳐서입니다. 특히 35세 미만은 '뉴스가 이해하기 어렵다'는 답이 더 많았습니다. 제가 느낀 P1, P2, P3이 세계적인 현상이라는 뜻입니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">01 · 문제 정의 — 데이터로 확인</div>
+  <h2>나만의 문제가 아니다: <span class="hl">10명 중 4명</span>이 뉴스를 피한다</h2>
+  <p class="lead">로이터 저널리즘 연구소 「디지털 뉴스 리포트 2025」 — 48개국 약 10만 명 조사</p>
+  <div class="grid" style="grid-template-columns:1fr 1.35fr;align-items:start">
+    <div class="card" style="background:var(--accent-soft);border-color:#ffd7c4">
+      <div class="bigstat">40<small>%</small></div>
+      <div class="statlabel"><b>"가끔 또는 자주 뉴스를 일부러 피한다"</b><br>조사 이래 가장 높은 수준에 머물러 있음<br>(2017년 29% → 2024년 39% → 2025년 40%)</div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:14px">뉴스를 피하는 이유 (회피자 기준, 복수 응답)</h3>
+      <div class="bar"><span class="lb">기분이 나빠져서</span><span class="track"><span class="fill k" style="width:78%;display:block"></span></span><span class="v">39%</span></div>
+      <div class="bar"><span class="lb">양이 많아 지쳐서</span><span class="track"><span class="fill k" style="width:62%;display:block"></span></span><span class="v">31%</span></div>
+      <p style="margin-top:14px">35세 미만은 <b>"내 삶과 상관없어 보인다"</b>, <b>"이해하기 너무 어렵다"</b>는 응답이 윗세대보다 뚜렷하게 많음</p>
+    </div>
+  </div>
+  <div class="msg">→ 내가 느낀 <b>P1 재미없음 · P2 지침(흩어진 정보) · P3 어려움</b>은 세계적으로 확인되는 현상이다.</div>
+  <div class="src">출처: Reuters Institute, Digital News Report 2025 (2025.06) · Digital News Report 2024 (2024.06, Press Gazette 보도) · Statista, "Why People Actively Try to Avoid the News" (2025)</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 5. 근거②: 한국 -->
+<section class="slide" data-notes="한국은 어떨까요? 올해 6월 나온 <b>디지털 뉴스 리포트 2026</b>의 한국 분석입니다. 한국인은 61%가 포털·검색으로 뉴스를 보는데, 48개국 평균의 두 배입니다. 반면 언론사 사이트나 앱을 직접 찾아가는 사람은 8%로 48개국 중 거의 꼴찌입니다. 즉, 한국인은 뉴스를 <b>직접 찾아가지 않고, 눈앞에 보이는 것을 본다</b>는 뜻입니다. 그리고 AI 챗봇으로 뉴스를 보는 사람이 1년 만에 두 배가 됐습니다. AI가 뉴스를 정리해 주는 방식이 이미 받아들여지고 있다는 근거입니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">01 · 문제 정의 — 한국의 경우</div>
+  <h2>한국인은 뉴스를 <span class="hl">찾아가지 않는다</span> — 눈앞에 보이는 것을 본다</h2>
+  <p class="lead">「디지털 뉴스 리포트 2026」 한국 결과 (한국언론진흥재단 분석, 2026년 6월)</p>
+  <div class="grid" style="grid-template-columns:1.3fr 1fr">
+    <div class="card">
+      <h3 style="margin-bottom:12px">주로 어디로 뉴스를 보나요? (지난 1주일)</h3>
+      <div class="bar"><span class="lb">포털·검색 — 한국</span><span class="track"><span class="fill k" style="width:61%;display:block"></span></span><span class="v">61%</span></div>
+      <div class="bar"><span class="lb">포털·검색 — 48개국 평균</span><span class="track"><span class="fill" style="width:31%;display:block"></span></span><span class="v">31%</span></div>
+      <div class="bar" style="margin-top:18px"><span class="lb">언론사 직접 방문 — 한국</span><span class="track"><span class="fill k" style="width:8%;display:block"></span></span><span class="v">8%</span></div>
+      <div class="bar"><span class="lb">언론사 직접 방문 — 평균</span><span class="track"><span class="fill" style="width:22%;display:block"></span></span><span class="v">22%</span></div>
+      <p style="margin-top:10px;font-size:17px;color:var(--sub)">직접 방문 8%는 48개국 중 뒤에서 두 번째</p>
+    </div>
+    <div class="grid" style="gap:14px">
+      <div class="card"><span class="tag or">AI로 뉴스 보기</span><div class="bigstat" style="font-size:46px">7% → 14%</div><div class="statlabel">AI 챗봇으로 뉴스를 보는 한국인, <b>1년 만에 2배</b> (평균 10%보다 높음)</div></div>
+      <div class="card"><span class="tag">뉴스 신뢰도</span><div class="bigstat" style="font-size:46px;color:var(--navy)">30%</div><div class="statlabel">48개국 평균 37%보다 낮음 → <b>출처 확인</b>이 중요</div></div>
+    </div>
+  </div>
+  <div class="msg" style="margin-bottom:18px">→ <b>P4 찾아보지 않음</b>도 한국에서 특히 뚜렷하다. 그리고 <b>AI가 정리해 주는 뉴스</b>는 이미 빠르게 받아들여지고 있다.</div>
+  <div class="src">출처: Reuters Institute, Digital News Report 2026 · 한국언론진흥재단 분석 (노컷뉴스 보도, 2026.06.16) · 참고: 한국언론진흥재단 「2025 언론수용자 조사」— 포털 뉴스 이용률 66.5% (2021년 79.2%에서 하락), 20~40대 이탈 뚜렷 (기자협회보 보도)</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 6. 핵심 통찰 -->
+<section class="slide" data-notes="두 데이터를 합치면 결론은 하나입니다. 사람들은 뉴스를 찾으러 가지 않습니다. 그래서 <b>뉴스가 먼저 찾아와야 하고, 첫 문장이 재미있어야 합니다.</b> 실제로 사람들이 AI에게 가장 원하는 뉴스 기능도 요약 27%, 맞춤 추천·알림 21%였습니다. 뉴스 봐는 정확히 이 지점을 겨냥합니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">02 · 핵심 통찰</div>
+  <h2>"찾으러 가는" 구조로는 실패한다</h2>
+  <p class="lead">문제와 데이터를 합치면, 해결의 방향은 두 가지로 좁혀집니다.</p>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:22px">
+    <div class="card" style="border-left:6px solid var(--accent)"><span class="tag or">방향 ①</span><h3 style="font-size:26px">뉴스가 <span class="hl">먼저 찾아와야</span> 한다</h3><p>찾아가지 않는 사람(P4)에게는 검색창이 아니라 <b>알림</b>이 필요하다.</p></div>
+    <div class="card" style="border-left:6px solid var(--navy)"><span class="tag">방향 ②</span><h3 style="font-size:26px">첫 문장이 <span class="navy">재미있어야</span> 한다</h3><p>재미없으면(P1) 누르지 않는다. 눌렀을 때는 <b>충분하고 쉬운 정보</b>(P2·P3)가 있어야 한다.</p></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:12px">사람들이 AI 뉴스 기능 중 가장 원하는 것 (48개국, 2025)</h3>
+    <div class="bar"><span class="lb">기사 요약</span><span class="track"><span class="fill k" style="width:27%;display:block"></span></span><span class="v">27%</span></div>
+    <div class="bar"><span class="lb">번역</span><span class="track"><span class="fill" style="width:24%;display:block"></span></span><span class="v">24%</span></div>
+    <div class="bar"><span class="lb">맞춤 추천·뉴스 알림</span><span class="track"><span class="fill k" style="width:21%;display:block"></span></span><span class="v">21%</span></div>
+  </div>
+  <div class="src">출처: Reuters Institute, Digital News Report 2025 — AI와 개인화 뉴스 (Nieman Lab 보도, 2025.06)</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 7. 해결: 매핑 -->
+<section class="slide" data-notes="그래서 문제 네 개마다 해결책을 하나씩 연결했습니다. 재미없음은 단계별 관심 분야 선택으로, 흩어진 정보는 여러 기사를 묶은 종합 기사로, 어려움은 단어 해설로, 찾아보지 않음은 어그로 한 줄 알림으로 해결합니다. 기능이 따로 노는 것이 아니라 <b>문제에서 출발한 기능</b>이라는 점이 핵심입니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책</div>
+  <h2>문제 4개 → 해결책 4개, <span class="hl">하나씩 정확히 연결</span></h2>
+  <p class="lead">모든 기능은 앞에서 정의한 문제에서 출발합니다.</p>
+  <div class="map">
+    <div class="p"><b>P1 재미가 없다</b>관심 없는 기사가 먼저 보임</div><div class="ar">→</div>
+    <div class="s"><b>단계별 관심 분야 선택 + 3개 페이지</b>큰 분야 → 깊은 분야(예: 과학 → 우주)까지 골라 좁게 맞춤</div>
+    <div class="p"><b>P2 부실하고 흩어져 있다</b>기사 하나로는 결론이 없음</div><div class="ar">→</div>
+    <div class="s"><b>종합 기사 (기사 덩어리)</b>같은 사건의 여러 기사를 AI가 한 편으로 정리 + 출처 링크</div>
+    <div class="p"><b>P3 너무 어렵다</b>내 수준보다 전문적</div><div class="ar">→</div>
+    <div class="s"><b>어려운 단어 해설</b>밑줄 친 단어를 탭(터치)하면 쉬운 설명</div>
+    <div class="p"><b>P4 찾아보지 않는다</b>귀찮아서 검색을 안 함</div><div class="ar">→</div>
+    <div class="s"><b>어그로 한 줄 알림</b>하루 3번(7·12·19시) 눌러보고 싶은 한 문장을 먼저 보냄</div>
+  </div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 8. 사용 흐름 -->
+<section class="slide" data-notes="실제 사용 흐름입니다. 처음 한 번 관심 분야를 고르면, 서버에서 AI가 뉴스를 모아 정리합니다. 아침 7시에 알림이 오고, 누르면 여러 기사를 합친 종합 기사가 나옵니다. 어려운 단어는 탭하면 설명이 뜨고, 맨 아래에서 원문 기사를 확인할 수 있습니다. 사용자가 하는 일은 <b>알림을 누르는 것 하나</b>뿐입니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책 — 사용 흐름</div>
+  <h2>사용자가 할 일은 <span class="hl">알림을 누르는 것</span> 하나</h2>
+  <div class="flow">
+    <div class="steps">
+      <div class="st"><span class="n">1</span><div><b>관심 분야 고르기</b><span class="who">처음 1번</span><br>① 1순위 큰 분야 → ② 깊은 분야 → ③ 2순위 큰 분야</div></div>
+      <div class="st"><span class="n">2</span><div><b>AI가 뉴스를 모으고 정리</b><span class="who">서버 자동</span><br>같은 사건끼리 묶어 종합 기사 + 어그로 한 줄 생성</div></div>
+      <div class="st"><span class="n">3</span><div><b>알림 도착</b><span class="who">7·12·19시</span><br>찾아가지 않아도 한 문장이 먼저 보임</div></div>
+      <div class="st"><span class="n">4</span><div><b>눌러서 종합 기사 읽기</b><br>어려운 단어는 탭하면 해설</div></div>
+      <div class="st"><span class="n">5</span><div><b>출처 확인</b><br>문단마다 근거가 된 원문 기사 링크</div></div>
+    </div>
+    <div class="phone"><div class="screen lock">
+      <div class="time">7:00</div><div class="date">10월 27일 화요일</div>
+      <div class="noti"><div class="h"><span>📰 뉴스 봐 · <i>오늘의 화제</i></span><span>지금</span></div><div class="b">이번 주 세계 뉴스 요약: 다 망했는데 펭귄만 살아남음</div></div>
+      <div class="noti" style="opacity:.75"><div class="h"><span>📰 뉴스 봐 · <i>오늘의 화제</i></span><span>어제</span></div><div class="b">추경이 뭔지 몰라도 괜찮아. 근데 내일 물가는 이거 때문에 바뀜</div></div>
+    </div></div>
+    <div class="phone"><div class="screen">
+      <div class="art">
+        <div class="bc">오늘의 화제 · 기사 5개 종합</div>
+        <div class="tt">○○ 사태, 처음부터 끝까지 한 번에 정리</div>
+        <div class="warn">⚠ "오늘의 한 문장"은 흥미를 위해 과장될 수 있어요. 정확한 내용은 본문에서 확인해 주세요.</div>
+        <p>정부는 어제 <u>추가경정예산</u>을 국회에 제출했다.<sup>[1][3]</sup> 규모는 지난해보다 커졌고…</p>
+        <div class="tip"><b>추가경정예산</b> — 한 해 예산이 이미 정해진 뒤, 부족한 돈을 채우려고 새로 짜는 예산</div>
+        <p>전문가들은 물가에 미칠 영향을 두고 의견이 갈린다.<sup>[2][5]</sup></p>
+      </div>      <div class="srcs"><b>출처 기사 5개</b><br>[1] ○○일보 · [2] △△뉴스 · [3] □□신문 …</div>
+    </div></div>
+  </div>
+  <div class="src">화면은 설명용 예시이며, 기사 내용은 가상입니다.</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 9. MVP 기능 -->
+<section class="slide" data-notes="첫 버전, 즉 MVP에는 기능을 딱 네 개만 넣었습니다. 대학 과제 규모에서 끝까지 동작하는 것을 만드는 것이 목표이기 때문입니다. 네 기능만으로 <b>알림부터 출처 확인까지 한 흐름</b>이 완성됩니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책 — 첫 버전(MVP) 범위</div>
+  <h2>기능은 <span class="hl">딱 4개</span>만 — 작게 만들어 끝까지 동작시킨다</h2>
+  <p class="lead">MVP(최소 기능 제품): 가설을 확인할 수 있는 가장 작은 첫 버전</p>
+  <style>
+    .mvp .card{display:flex;flex-direction:column;padding:24px 22px;min-height:330px}
+    .mvp .card > .tag{align-self:flex-start}
+    .mvp .ic{font-size:44px;line-height:1;margin:6px 0 14px}
+    .mvp h3{font-size:23px}
+    .mvp .card p{font-size:19px}
+    .mvp .card p:last-child{margin-top:auto!important;padding-top:14px}
+  </style>
+  <div class="grid mvp" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card"><span class="tag or">FR-01</span><div class="ic">🎯</div><h3>맞춤 기사 모으기</h3><p>오늘의 화제 / 나의 관심 분야 / 추천 뉴스 3개 페이지. 큰 분야 10개 중 단계별 선택</p><p style="margin-top:14px"><span class="tag rd" style="margin:0">해결: P1 재미없음</span></p></div>
+    <div class="card"><span class="tag or">FR-02</span><div class="ic">📚</div><h3>종합 기사</h3><p>여러 기사를 AI가 새로 정리. 출처 링크 + 어려운 단어 탭 해설</p><p style="margin-top:14px"><span class="tag rd" style="margin:0">해결: P2 흩어짐 · P3 어려움</span></p></div>
+    <div class="card"><span class="tag or">FR-03</span><div class="ic">🎣</div><h3>어그로 한 줄</h3><p>규칙(강한 단어·친근한 말투) + 예시 제목 10~20개로 AI가 생성. 안내 문구 표시</p><p style="margin-top:14px"><span class="tag rd" style="margin:0">해결: P1 재미없음</span></p></div>
+    <div class="card"><span class="tag or">FR-04</span><div class="ic">🔔</div><h3>알림</h3><p>안드로이드 알림, 하루 3번 (7·12·19시). 누르면 해당 종합 기사로 이동</p><p style="margin-top:14px"><span class="tag rd" style="margin:0">해결: P4 찾아보지 않음</span></p></div>
+  </div>
+  <div class="msg">4개 기능만으로 <b>알림 → 클릭 → 종합 기사 → 출처</b>의 한 흐름이 완성된다 — 가설을 확인하기에 충분한 최소 범위.</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 10. 어그로 한 줄 원칙 -->
+<section class="slide" data-notes="'어그로'라는 말에 낚시성 기사가 떠오르실 수 있습니다. 하지만 낚시성 제목이 나쁜 이유는 눌렀을 때 <b>알맹이가 없기 때문</b>입니다. 뉴스 봐는 누르면 여러 기사를 모은 종합 기사가 나옵니다. 약속보다 더 많은 정보를 주는 것이죠. 그래서 본체는 정보, 어그로는 사람을 끌어오는 부가 기능으로 두었고, 과장 가능성은 안내 문구로 미리 알립니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책 — 설계 원칙</div>
+  <h2>"낚시성 기사와 뭐가 다른가요?"</h2>
+  <p class="lead">낚시성 제목이 나쁜 이유는 <b>눌렀을 때 알맹이가 없기 때문</b>입니다. 뉴스 봐는 정반대입니다.</p>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-bottom:22px">
+    <div class="card" style="background:var(--red-soft);border-color:#f4cccc"><span class="tag rd">낚시성 기사</span><h3>자극적 제목 → <span style="color:var(--red)">빈약한 본문</span></h3><p>약속한 것보다 <b>적은</b> 정보. 기대가 실망으로 끝남</p></div>
+    <div class="card" style="background:var(--green-soft);border-color:#c6eadb"><span class="tag gr">뉴스 봐</span><h3>흥미로운 한 줄 → <span style="color:var(--green)">여러 기사의 종합 정리</span></h3><p>약속한 것보다 <b>많은</b> 정보. 결론까지 있는 한 편의 글</p></div>
+  </div>
+  <table class="big">
+    <tr><th style="width:13%;text-align:center">우선순위</th><th>원칙</th></tr>
+    <tr><td><b>1</b></td><td><b>본체는 정보</b> — 여러 기사를 모아 풍부하고 결론까지 있는 글을 준다</td></tr>
+    <tr><td><b>2</b></td><td><b>어그로 한 줄은 부가 기능</b> — 사람을 끌어오는 기술로만 빌려 쓴다 (강한 단어·유행어 허용)</td></tr>
+    <tr><td><b>3</b></td><td><b>과장은 허용, 대신 안내 문구</b> — "흥미를 위해 과장될 수 있어요. 정확한 내용은 본문에서 확인해 주세요."</td></tr>
+  </table>
+  <div class="pageno"></div>
+</section>
+
+<!-- 11. 차별점 -->
+<section class="slide" data-notes="기존 서비스와 비교하면, 포털은 기사 목록을 주고, 요약 뉴스레터는 남이 고른 뉴스를 줍니다. 뉴스 봐는 <b>내 취향에 맞춘 사건 하나를, 여러 기사로 모아, 내 수준으로</b> 줍니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책 — 차별점</div>
+  <h2>"내 취향의 사건 하나를, 여러 기사로 모아, <span class="hl">내 수준으로</span>"</h2>
+  <p class="lead">포털은 "기사 목록"을 주고, 요약 뉴스레터는 "남이 고른 뉴스"를 줍니다.</p>
+  <table>
+    <tr><th style="width:22%">비교 항목</th><th>포털 뉴스</th><th>요약 뉴스레터</th><th style="background:var(--accent-soft);color:var(--accent)">뉴스 봐</th></tr>
+    <tr><td><b>누가 먼저 움직이나</b></td><td>내가 찾아감</td><td>메일이 옴 (메일함을 열어야 봄)</td><td style="background:#fff8f4"><b>알림이 먼저 옴</b></td></tr>
+    <tr><td><b>무엇을 보여주나</b></td><td>기사 목록 (하나씩 따로)</td><td>편집자가 고른 뉴스</td><td style="background:#fff8f4"><b>내가 고른 깊은 분야 + 오늘의 화제</b></td></tr>
+    <tr><td><b>한 사건의 정보량</b></td><td>기사 1개 (흩어짐)</td><td>짧은 요약</td><td style="background:#fff8f4"><b>여러 기사를 묶은 종합 기사</b></td></tr>
+    <tr><td><b>어려운 내용</b></td><td>스스로 검색</td><td>편집자 수준에 맞춤</td><td style="background:#fff8f4"><b>단어를 탭하면 바로 해설</b></td></tr>
+    <tr><td><b>출처 확인</b></td><td>기사 자체</td><td>링크 일부</td><td style="background:#fff8f4"><b>문단마다 원문 링크</b></td></tr>
+  </table>
+  <div class="msg" style="margin-top:22px">편식 방지까지 — <b>'오늘의 화제'</b> 페이지는 관심 분야와 상관없이 누구나 알아야 할 시사를 챙겨 준다.</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 12. 시스템 구성 -->
+<section class="slide" data-notes="구현은 대학 과제 규모에 맞게 <b>전부 무료</b>로 구성했습니다. 서버 컴퓨터를 따로 빌리지 않고, GitHub Actions가 하루 세 번 파이썬 스크립트를 실행합니다. 스크립트가 구글 뉴스와 네이버에서 기사를 모으고, Gemini AI로 정리해 Firebase에 올리면, 안드로이드 앱은 읽어서 보여주기만 합니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">03 · 해결책 — 어떻게 만드나</div>
+  <h2>서버 없이, <span class="hl">비용 0원</span>으로 구현한다</h2>
+  <p class="lead">AI 작업은 서버 쪽 스크립트가, 앱은 결과를 보여주기만 → 나중에 아이폰·웹을 붙일 때 화면만 새로 만들면 됨</p>
+  <div class="arch">
+    <div class="box"><div class="tt">① 뉴스 출처</div><div class="nm">구글 뉴스 RSS</div><p>오늘의 화제. 같은 사건의 기사들이 이미 묶여서 옴 (가입 불필요)</p><div class="nm" style="margin-top:12px">네이버 뉴스 검색 API</div><p>관심 분야·추천. 키워드 검색, 하루 25,000회 무료</p></div>
+    <div class="arw">→</div>
+    <div class="box ai"><div class="tt">② 자동 처리 (하루 3번)</div><div class="nm">GitHub Actions + 파이썬</div><p>6:30 · 11:30 · 18:30 예약 실행 → 기사 모으기 → 본문 추출</p><div class="nm" style="margin-top:12px">Gemini Flash-Lite</div><p>종합 기사 · 단어 해설 · 어그로 한 줄 생성 (무료 요금제, 다른 AI로 교체 가능하게 설계)</p></div>
+    <div class="arw">→</div>
+    <div class="box"><div class="tt">③ 결과 저장</div><div class="nm">Firebase Firestore</div><p>구글의 무료 앱 데이터 저장 서비스. 스크립트가 올리고 앱은 읽기만</p></div>
+    <div class="arw">→</div>
+    <div class="box app"><div class="tt">④ 보여주기</div><div class="nm">안드로이드 앱</div><p>7 · 12 · 19시 스스로 알림 예약 → 누르면 종합 기사</p><p style="margin-top:8px">Windows에서 개발, 설치 파일로 바로 설치</p></div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:20px">
+    <div class="card" style="text-align:center"><div class="bigstat" style="font-size:40px">0원</div><div class="statlabel">필요한 계정 모두 무료<br>(GitHub · 구글 · 네이버)</div></div>
+    <div class="card" style="text-align:center"><div class="bigstat" style="font-size:40px">최대 약 42회/일</div><div class="statlabel">AI 호출 (종합 기사 최대 9개 × 3번 + 고르기 등)<br>→ 하루 50회 이하로 관리</div></div>
+    <div class="card" style="text-align:center"><div class="bigstat" style="font-size:40px;color:var(--navy)">교체 가능</div><div class="statlabel">무료 한도가 바뀌면<br>다른 AI 모델로 갈아끼움</div></div>
+  </div>
+  <div class="src">근거: 네이버 개발자센터 검색 API 이용 안내(일 25,000회) · Google AI Studio Gemini API 무료 요금제 (한도는 수시 변경되어 가입 후 실제 화면에서 확인 예정)</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 13. 기대 결과 / 검증 -->
+<section class="slide" data-notes="이 프로젝트로 확인하려는 가설은 하나입니다. '흥미로운 한 문장을 먼저 보여주면, 사람들이 뉴스를 실제로 눌러 읽는다.' 성공 기준은 두 가지입니다. 시연에서 알림부터 출처 확인까지 끝까지 동작할 것, 그리고 제가 2주 동안 직접 쓰면서 클릭 기록을 남기는 것입니다. 현재 아이디어 정리, 기획서, 기능명세서까지 마쳤고 화면 설계와 목업을 진행 중입니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">04 · 기대 결과</div>
+  <h2>확인할 가설과 <span class="hl">성공 기준</span></h2>
+  <div class="card" style="background:var(--navy);border:0;color:#fff;margin:6px 0 20px">
+    <p style="color:#c9d5ec;font-size:17px;margin-bottom:4px">확인할 가설</p>
+    <p style="color:#fff;font-size:25px;font-weight:800;line-height:1.4">"흥미로운 한 문장을 <span style="color:#ffb38f">먼저</span> 보여주면, 사람들이 뉴스를 <span style="color:#ffb38f">실제로 눌러 읽는다</span>."</p>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr 1.1fr">
+    <div class="card"><span class="tag gr">성공 기준 ①</span><h3>끝까지 동작하는 시연</h3><p>알림 문장 → 클릭 → 종합 기사 → 출처 확인까지 한 흐름이 끊김 없이 동작</p></div>
+    <div class="card"><span class="tag gr">성공 기준 ②</span><h3>2주 실사용 기록</h3><p>본인이 2주 동안 사용하며 <b>알림을 눌렀는지</b> 클릭 기록을 남겨 가설 확인</p></div>
+    <div class="card"><span class="tag">진행 현황</span>
+      <table style="margin-top:2px">
+        <tr><td style="padding:6px 0;font-size:18px">아이디어 정리 · MVP 확정</td><td style="padding:5px 0;text-align:right">✅</td></tr>
+        <tr><td style="padding:6px 0;font-size:18px">기획서 · 기능명세서</td><td style="padding:5px 0;text-align:right">✅</td></tr>
+        <tr><td style="padding:6px 0;font-size:18px">화면 설계 · 목업 4종</td><td style="padding:5px 0;text-align:right">⏳</td></tr>
+        <tr><td style="padding:6px 0;font-size:18px">나머지 설계 문서 → 구현</td><td style="padding:5px 0;text-align:right">🔴</td></tr>
+        <tr><td style="padding:6px 0;font-size:18px;border:0">시연</td><td style="padding:5px 0;text-align:right;border:0">🔴</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="msg">기대 효과 — 뉴스를 <b>찾아보지 않던 사람</b>도 하루 3번, 내 관심사의 사건을 <b>결론까지</b>, <b>내 수준으로</b> 알게 된다.</div>
+  <div class="pageno"></div>
+</section>
+
+<!-- 14. 마무리 -->
+<section class="slide cover" data-notes="정리하겠습니다. 사람들은 뉴스를 찾으러 가지 않습니다. 그러니 뉴스가, 재미있는 한 문장으로, 먼저 찾아가야 합니다. 그것이 <b>뉴스 봐</b>입니다. 감사합니다.">
+  <div class="kicker">정리</div>
+  <h1 style="font-size:48px;line-height:1.35;margin-bottom:36px">사람들은 뉴스를 찾으러 가지 않는다.<br>그러니 뉴스가, <span>재미있는 한 문장</span>으로,<br>먼저 찾아가야 한다.</h1>
+  <div style="display:flex;gap:16px;margin-bottom:44px">
+    <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:14px 20px;font-size:20px;line-height:1.5"><b style="color:#ffb38f">문제</b><br>10명 중 4명이 뉴스를 피하고<br>한국인의 언론사 직접 방문은 8%뿐</div>
+    <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:14px 20px;font-size:20px;line-height:1.5"><b style="color:#ffb38f">해결</b><br>맞춤 분야 · 종합 기사 ·<br>단어 해설 · 어그로 한 줄 알림</div>
+    <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:14px 20px;font-size:20px;line-height:1.5"><b style="color:#ffb38f">결과</b><br>끝까지 동작하는 시연 +<br>2주 클릭 기록으로 가설 확인</div>
+  </div>
+  <div style="font-size:30px;font-weight:800">감사합니다 <span style="color:var(--accent)">·</span> 뉴스 봐</div>
+</section>
+
+<!-- 15. 출처 -->
+<section class="slide" data-notes="발표에 사용한 자료의 출처입니다. 가능한 한 <b>2025~2026년 최신 조사</b>를 사용했습니다.">
+  <div class="brand">뉴스 <b>봐</b></div>
+  <div class="kicker">REFERENCES</div>
+  <h2>참고 자료</h2>
+  <p class="lead">가능한 한 2025~2026년 최신 조사를 사용했습니다.</p>
+  <ul class="refs">
+    <li><span class="i">1</span><b>Reuters Institute, 「Digital News Report 2026」</b> (2026.06) — 한국 결과: 한국언론진흥재단 분석, 노컷뉴스 보도 (2026.06.16)<br><a>https://en.nocutnews.co.kr/news/6533916</a></li>
+    <li><span class="i">2</span><b>Reuters Institute, 「Digital News Report 2025」</b> (2025.06) — 뉴스 회피 40%, 회피 이유<br><a>https://reutersinstitute.politics.ox.ac.uk/digital-news-report/2025</a> · <a>https://www.statista.com/chart/34635/why-people-actively-try-to-avoid-the-news</a></li>
+    <li><span class="i">3</span><b>Nieman Lab, "AI-personalized news takes new forms, but do readers want it?"</b> (2025.06) — AI 뉴스 기능 선호 (요약 27% 등)<br><a>https://www.niemanlab.org/2025/06/ai-personalized-news-takes-new-forms-but-do-readers-want-it/</a></li>
+    <li><span class="i">4</span><b>Press Gazette, "News avoidance at record levels as four in ten worn out by news"</b> (2024.06) — Digital News Report 2024<br><a>https://pressgazette.co.uk/media-audience-and-business-data/news-avoidance-at-record-levels-as-four-in-ten-worn-out-by-news/</a></li>
+    <li><span class="i">5</span><b>한국언론진흥재단, 「2025 언론수용자 조사」</b> — 기자협회보 보도 "'읽는 뉴스'서 '보는 뉴스'로… 포털 지고 유튜브 급등"<br><a>https://www.journalist.or.kr/news/article.html?no=60017</a></li>
+    <li><span class="i">6</span><b>네이버 개발자센터 검색 API · Google AI Studio (Gemini API)</b> — 이용 한도·요금 안내 (2026.10 확인 기준)</li>
+    <li><span class="i">7</span><b>프로젝트 자체 문서</b> — 아이디어 정리(idea.md v0.15) · 02 기획서 v1.3 · 03 기능명세서</li>
+  </ul>
+  <div class="pageno"></div>
+</section>
+
+</div>
+
+<div id="progress"></div>
+<div id="help">← → 이동 · F 전체화면 · N 발표자 메모</div>
+<div id="hud">
+  <button id="prev">◀ 이전</button>
+  <button id="next">다음 ▶</button>
+  <button id="fs">전체화면</button>
+  <button id="nt">메모</button>
+</div>
+<div id="notes"></div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var notes = document.getElementById('notes');
+  var total = slides.length, cur = 0;
+
+  slides.forEach(function(s, i){
+    var p = s.querySelector('.pageno');
+    if (p) p.textContent = (i + 1) + ' / ' + total;
+  });
+
+  function fit(){
+    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.97;
+    stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+
+  function show(n){
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides.forEach(function(s, i){ s.classList.toggle('active', i === cur); });
+    document.getElementById('progress').style.width = ((cur + 1) / total * 100) + '%';
+    notes.innerHTML = '<b>발표자 메모 (' + (cur + 1) + '/' + total + ')</b> — ' + (slides[cur].getAttribute('data-notes') || '');
+    if (location.hash !== '#' + (cur + 1)) history.replaceState(null, '', '#' + (cur + 1));
+  }
+
+  function toggleFs(){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+    else document.exitFullscreen && document.exitFullscreen();
+  }
+  function toggleNotes(){ notes.style.display = notes.style.display === 'block' ? 'none' : 'block'; }
+
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { e.preventDefault(); show(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); show(cur - 1); }
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(total - 1);
+    else if (k === 'f' || k === 'F') toggleFs();
+    else if (k === 'n' || k === 'N') toggleNotes();
+  });
+  document.getElementById('prev').onclick = function(){ show(cur - 1); };
+  document.getElementById('next').onclick = function(){ show(cur + 1); };
+  document.getElementById('fs').onclick = toggleFs;
+  document.getElementById('nt').onclick = toggleNotes;
+  stage.addEventListener('click', function(e){
+    if (e.target.closest('a,button')) return;
+    var r = stage.getBoundingClientRect();
+    show(e.clientX < r.left + r.width * 0.3 ? cur - 1 : cur + 1);
+  });
+
+  window.addEventListener('resize', fit);
+  fit();
+  var h = parseInt(location.hash.slice(1), 10);
+  show(isNaN(h) ? 0 : h - 1);
+})();
+</script>
+</body>
+</html>

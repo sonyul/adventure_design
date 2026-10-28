@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYS-2 휴대폰 알림 - 뉴스 봐 목업</title>
+<!--
+  뉴스 봐 목업 SYS-2 휴대폰 알림 (근거: docs/design/04_화면설계서.md v1.3 2-2 SYS-2, 3장 흐름도, 7장 / 03_기능명세서.md FR-04-2·FR-04-3·FR-03-3)
+  - 안드로이드가 띄우는 시스템 화면이라 S 번호가 없어 파일명 앞 번호를 00으로 씀.
+  - 보기 2개: ① 잠금화면(시계 7:00) 위 알림 1개 ② 화면 위에서 끌어내린 알림 패널. 같은 알림 1개만(FR-04-2 "한 번에 1개").
+  - 알림 제목 "뉴스 봐", 내용 = 어그로 한 줄(공백 포함 40자 이내). 안내 문구(M1)는 알림에 넣지 않음(FR-03-3).
+  - 알림을 누르면 03_종합기사.html?id=hot1&from=noti 로 이동(FR-04-3). 03의 어그로 한 줄과 글자 하나까지 같아야 함.
+  - 자기완결형 단일 HTML. 외부 CDN·웹폰트 없음(시스템 글꼴). 예시 문장은 지어낸 내용.
+  - 왼쪽 노란 점선 상자는 "목업 전용 컨트롤"로 실제 화면이 아님. ?demo=1 이면 숨김(발표 모드).
+-->
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#FFFFFF; --surface:#F6F7F9; --line:#E4E7EC; --text:#14171C; --text2:#3E4450; --muted:#5B6270;
+  --accent:#1D4ED8; --accent-weak:#EEF3FE; --accent-line:#BFD0F8;
+  --font:system-ui,-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+html,body{margin:0}
+body{background:#DDE1E7;font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+button{font-family:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px 16px 40px;flex-wrap:wrap}
+/* ---------- 목업 전용 컨트롤 (실제 화면 아님) ---------- */
+.mock{width:280px;flex:0 0 auto;background:#1F2329;color:#EDEFF3;border:2px dashed #F5B942;border-radius:14px;padding:16px;font-size:14px;line-height:1.5}
+.mock .badge{display:inline-block;background:#F5B942;color:#1F2329;font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+.mock h1{font-size:16px;margin:10px 0 2px}
+.mock p.sub{margin:0 0 4px;color:#B8BEC9;font-size:13px}
+.mock h2{font-size:13px;color:#F5B942;margin:16px 0 8px;font-weight:700}
+.mock .opts{display:flex;flex-direction:column;gap:6px}
+.mock button.opt{min-height:40px;text-align:left;padding:8px 12px;background:#2C323B;color:#EDEFF3;border:1px solid #444C58;border-radius:8px;cursor:pointer;font-size:13.5px}
+.mock button.opt:hover{border-color:#8A93A3}
+.mock button.opt[aria-pressed="true"]{background:#F5B942;color:#1F2329;border-color:#F5B942;font-weight:700}
+.mock .nav{display:flex;flex-wrap:wrap;gap:6px}
+.mock .nav a{color:#EDEFF3;font-size:12.5px;padding:6px 8px;border:1px solid #444C58;border-radius:6px;text-decoration:none}
+.mock .nav a.cur{background:#3A414C;border-color:#8A93A3}
+.mock .note{font-size:12px;color:#B8BEC9;margin-top:14px;border-top:1px solid #3A414C;padding-top:10px}
+.demo .mock{display:none}
+.demo .stage{padding-top:12px;padding-bottom:12px}
+/* ---------- 휴대폰 프레임 ---------- */
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.phone{position:relative;width:380px;height:800px;background:#111;border-radius:44px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.screen{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+.caption{font-size:12.5px;color:#3E4450;text-align:center;max-width:380px;margin:0}
+.homelink{font-size:12.5px;color:#3E4450}
+/* 보기 전환 (휴대폰 아래 - 발표 중에도 보임) */
+.seg{display:inline-flex;background:#fff;border:1px solid #C9CED6;border-radius:999px;padding:3px;gap:2px}
+.seg button{min-height:36px;border:0;background:transparent;border-radius:999px;padding:0 14px;font-size:13.5px;font-weight:600;color:var(--text2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+/* 공통: 상태 표시줄 */
+.sbar{position:absolute;top:0;left:0;right:0;height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:12.5px;font-weight:600;z-index:5}
+.sbar .ic{display:inline-flex;gap:6px;align-items:center}
+.sbar svg{width:15px;height:15px;fill:#fff}
+/* ---------- 보기 1: 잠금화면 ---------- */
+.lock{position:absolute;inset:0;background:
+  radial-gradient(120% 60% at 20% 10%,#3B5BDB 0%,rgba(59,91,219,0) 60%),
+  radial-gradient(90% 60% at 90% 80%,#7C3AED 0%,rgba(124,58,237,0) 60%),
+  linear-gradient(180deg,#141B3A 0%,#0B1024 100%);}
+.lock .clock{position:absolute;top:84px;left:0;right:0;text-align:center}
+.lock .clock .t{font-size:88px;font-weight:300;letter-spacing:-2px;line-height:1}
+.lock .clock .d{font-size:16px;margin-top:10px;opacity:.92;font-weight:500}
+.lock .clock .w{font-size:13px;margin-top:6px;opacity:.75}
+.lock .notis{position:absolute;top:276px;left:14px;right:14px}
+.noti{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;border:0;border-radius:22px;padding:14px 16px;cursor:pointer;font:inherit;color:inherit}
+.lock .noti{background:rgba(255,255,255,.88);color:#14171C;box-shadow:0 8px 24px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.noti:hover{filter:brightness(1.03)}
+.noti .appic{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;margin-top:1px}
+.noti .bd{flex:1;min-width:0}
+.noti .hd{display:flex;gap:6px;align-items:baseline;font-size:14.5px}
+.noti .hd b{font-weight:700}
+.noti .hd .time{font-size:12.5px;opacity:.65}
+.noti .tx{font-size:15px;line-height:1.45;margin-top:3px}
+.noti .chev{flex:0 0 auto;font-size:13px;opacity:.55;margin-top:4px}
+.lock .hint{position:absolute;bottom:70px;left:0;right:0;text-align:center;font-size:12.5px;opacity:.8}
+.lock .lockic{position:absolute;bottom:96px;left:50%;transform:translateX(-50%)}
+.lock .lockic svg{width:20px;height:20px;fill:#fff;opacity:.9}
+.lock .sc{position:absolute;bottom:26px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center}
+.lock .sc svg{width:20px;height:20px;fill:#fff}
+.lock .sc.l{left:28px}.lock .sc.r{right:28px}
+/* 알림 도착 애니메이션 */
+.arrive{animation:arrive .45s cubic-bezier(.2,.8,.2,1) both}
+@keyframes arrive{from{opacity:0;transform:translateY(-14px) scale(.97)}to{opacity:1;transform:none}}
+/* ---------- 보기 2: 알림 패널 (위에서 끌어내린 상태) ---------- */
+.home{position:absolute;inset:0;background:linear-gradient(180deg,#DCE6F7 0%,#F1F4FA 100%)}
+.home .grid{position:absolute;top:120px;left:26px;right:26px;display:grid;grid-template-columns:repeat(4,1fr);gap:26px 10px}
+.home .grid i{display:block;width:52px;height:52px;border-radius:16px;background:#fff;margin:0 auto;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.home .grid i.nb{background:var(--accent);color:#fff;font-style:normal;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:18px}
+.panel{position:absolute;inset:0;background:rgba(18,21,28,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:44px 16px 0;transform:translateY(-100%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.panel.show{transform:none}
+.panel.dragging{transition:none}
+.panel .top{display:flex;justify-content:space-between;align-items:flex-end;padding:0 8px}
+.panel .top .t{font-size:34px;font-weight:400;line-height:1}
+.panel .top .d{font-size:13.5px;opacity:.8;margin-top:6px}
+.panel .top .gear{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:18px}
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.qs .tile{display:flex;align-items:center;gap:10px;height:58px;border-radius:20px;background:#2A2F3A;padding:0 14px;font-size:13.5px;font-weight:600}
+.qs .tile.on{background:#AFC4FF;color:#0E1A3D}
+.qs .tile .ico{width:26px;text-align:center;font-size:16px}
+.qs .tile small{display:block;font-weight:400;font-size:11.5px;opacity:.75}
+.bright{margin:14px 0 4px;height:44px;border-radius:22px;background:#2A2F3A;position:relative;overflow:hidden}
+.bright span{position:absolute;left:0;top:0;bottom:0;width:62%;background:#AFC4FF;border-radius:22px;display:flex;align-items:center;padding-left:16px;color:#0E1A3D;font-size:16px}
+.panel .sect{font-size:13px;opacity:.75;margin:20px 6px 8px}
+.panel .noti{background:#2A2F3A;color:#fff}
+.panel .acts{display:flex;justify-content:space-between;margin-top:12px;padding:0 4px}
+.panel .acts span{font-size:13px;font-weight:600;background:#2A2F3A;border-radius:999px;padding:8px 14px}
+.panel .grab{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center}
+.panel .grab span{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,.4)}
+/* 알림을 누른 뒤 앱이 열리는 전환 */
+.opening{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .28s;z-index:20}
+.opening.show{opacity:1}
+@media (max-width:440px){
+  .stage{padding:12px 0 24px}
+  .mock{width:calc(100% - 32px)}
+  .phone{width:100%;max-width:380px;height:760px;border-radius:0;padding:0;background:none;box-shadow:none}
+  .screen{border-radius:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<script>
+/* 시연 모드: ?demo=1 이면 목업 설명 패널을 숨기고, 화면 사이 이동에 demo=1을 이어 붙인다. 노트북 화면 높이에 맞춰 휴대폰을 줄인다. */
+(function(){
+  var demo=new URLSearchParams(location.search).get("demo")==="1";
+  if(demo) document.documentElement.classList.add("demo");
+  window.nbGo=function(u){ if(demo && !/[?&]demo=1/.test(u)) u+=(u.indexOf("?")<0?"?":"&")+"demo=1"; location.href=u; };
+  document.addEventListener("click",function(e){
+    if(!demo||e.defaultPrevented) return;
+    var a=e.target.closest&&e.target.closest("a[href]"); if(!a||a.target) return;
+    var h=a.getAttribute("href"); if(!/\.html(\?|#|$)/.test(h)) return;
+    e.preventDefault(); window.nbGo(h);
+  });
+  function fit(){
+    var w=document.querySelector(".phone-wrap"); if(!w) return;
+    w.style.zoom=1; if(window.innerWidth<=440) return;
+    var s=Math.min(1,Math.max(.55,(window.innerHeight-(demo?60:100))/w.offsetHeight)); w.style.zoom=s;
+  }
+  window.addEventListener("resize",fit); document.addEventListener("DOMContentLoaded",fit);
+})();
+</script>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===== 목업 전용 컨트롤 (실제 화면 아님) ===== -->
+  <aside class="mock" aria-label="목업 전용 상태 보기 컨트롤">
+    <span class="badge">목업 전용 · 앱 화면 아님</span>
+    <h1>SYS-2 휴대폰 알림</h1>
+    <p class="sub">안드로이드가 띄우는 시스템 화면입니다. 알림을 누르면 S03 종합 기사가 열려요. 화면 위쪽을 아래로 끌면 알림 패널, 패널을 위로 밀면 잠금화면으로 돌아가요.</p>
+
+    <h2>보기</h2>
+    <div class="opts" id="presets">
+      <button class="opt" data-v="lock">잠금화면 위 알림 (7:00)</button>
+      <button class="opt" data-v="panel">알림 패널 (위에서 끌어내림)</button>
+      <button class="opt" data-v="replay">알림 도착 다시 보기</button>
+    </div>
+
+    <h2>다른 화면</h2>
+    <nav class="nav" aria-label="목업 화면 이동">
+      <a href="index.html">시연 시작</a>
+      <a href="00_알림.html" class="cur">SYS-2 알림</a>
+      <a href="01_분야선택.html">S01 분야 선택</a>
+      <a href="02_뉴스목록.html">S02 뉴스 목록</a>
+      <a href="03_종합기사.html">S03 종합 기사</a>
+      <a href="04_설정.html">S04 설정</a>
+    </nav>
+    <p class="note">근거: 04_화면설계서 v1.3 SYS-2 · 03_기능명세서 FR-04-2(제목 "뉴스 봐", 내용 = 어그로 한 줄, 한 번에 1개), FR-04-3(누르면 해당 종합 기사), FR-03-3(알림에는 안내 문구 없음). 알림 문장은 <b>지어낸 예시</b>이며 S02 첫 칸·S03 맨 위 문장과 같습니다.</p>
+  </aside>
+
+  <!-- ===== 휴대폰 ===== -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen">
+
+        <!-- 보기 1: 잠금화면 -->
+        <section class="lock" id="lockView" aria-label="잠금화면">
+          <div class="sbar" aria-hidden="true"><span>뉴스봐 통신</span><span class="ic">
+            <svg viewBox="0 0 24 24"><path d="M2 22h3V12H2zm5 0h3V8H7zm5 0h3V4h-3zm5 0h3V1h-3z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 21 0 7.5C3.3 4.6 7.5 3 12 3s8.7 1.6 12 4.5z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M16 4h-2V2h-4v2H8a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>
+            <span>82%</span></span></div>
+          <div class="clock" aria-hidden="false">
+            <div class="t">7:00</div>
+            <div class="d">10월 28일 수요일</div>
+            <div class="w">☁ 12°C</div>
+          </div>
+          <div class="notis" id="lockNotis"></div>
+          <div class="lockic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zM10 7a2 2 0 0 1 4 0v2h-4z"/></svg></div>
+          <div class="hint" aria-hidden="true">위로 스와이프하여 잠금 해제</div>
+          <div class="sc l" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></div>
+          <div class="sc r" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3 7.2 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3zm3 5a5 5 0 1 1 0 10 5 5 0 0 1 0-10z"/></svg></div>
+        </section>
+
+        <!-- 보기 2: 알림 패널 (홈 화면 위로 끌어내림) -->
+        <section class="home" id="homeView" aria-label="홈 화면" hidden>
+          <div class="sbar" aria-hidden="true" style="color:#14171C"><span>7:00</span><span>82%</span></div>
+          <div class="grid" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i class="nb">봐</i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="panel" id="panel" role="region" aria-label="알림 패널">
+            <div class="top">
+              <div><div class="t">7:00</div><div class="d">10월 28일 수요일</div></div>
+              <div class="gear" aria-hidden="true">⚙</div>
+            </div>
+            <div class="qs" aria-hidden="true">
+              <div class="tile on"><span class="ico">≋</span><span>인터넷<small>집 와이파이</small></span></div>
+              <div class="tile on"><span class="ico">ᛒ</span><span>블루투스<small>켜짐</small></span></div>
+              <div class="tile"><span class="ico">☾</span><span>방해 금지<small>꺼짐</small></span></div>
+              <div class="tile"><span class="ico">⚡</span><span>손전등<small>꺼짐</small></span></div>
+            </div>
+            <div class="bright" aria-hidden="true"><span>☀</span></div>
+            <div class="sect">알림</div>
+            <div id="panelNotis"></div>
+            <div class="acts" aria-hidden="true"><span>기록</span><span>모두 지우기</span></div>
+            <div class="grab" aria-hidden="true"><span></span></div>
+          </div>
+        </section>
+
+        <div class="opening" id="opening" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="seg" role="group" aria-label="보기 전환">
+      <button type="button" data-v="lock">잠금화면</button>
+      <button type="button" data-v="panel">알림 패널</button>
+    </div>
+    <p class="caption">휴대폰 알림 목업 (안드로이드 시스템 화면) · 알림을 누르면 종합 기사로 이동</p>
+    <a class="homelink" href="index.html">시연 시작 페이지로</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* 어그로 한 줄: 03_종합기사.html(id=hot1)·02_뉴스목록.html 오늘의 화제 첫 칸과 글자 하나까지 같아야 함 (FR-04-3 완료 기준) */
+  var HOOK="점심값 1만 원 시대, 직장인 지갑이 비명을";
+  var TARGET="03_종합기사.html?id=hot1&from=noti";
+  var $=function(id){return document.getElementById(id);};
+  var view="lock";
+
+  function notiHTML(time){
+    return '<button type="button" class="noti arrive" data-open="1" aria-label="뉴스 봐 알림: '+HOOK+'. 누르면 기사가 열려요">'+
+      '<span class="appic" aria-hidden="true">봐</span>'+
+      '<span class="bd"><span class="hd"><b>뉴스 봐</b><span class="time">· '+time+'</span></span>'+
+      '<span class="tx">'+HOOK+'</span></span>'+
+      '<span class="chev" aria-hidden="true">⌄</span></button>';
+  }
+  function renderNotis(){
+    $("lockNotis").innerHTML=notiHTML("지금");
+    $("panelNotis").innerHTML=notiHTML("지금");
+  }
+  function setView(v){
+    view=v;
+    $("lockView").hidden = v!=="lock";
+    $("homeView").hidden = v!=="panel";
+    var p=$("panel");
+    p.style.transform="";
+    if(v==="panel"){ p.classList.remove("show"); void p.offsetWidth; requestAnimationFrame(function(){p.classList.add("show");}); }
+    document.querySelectorAll("[data-v]").forEach(function(b){
+      if(b.getAttribute("data-v")!=="replay") b.setAttribute("aria-pressed",String(b.getAttribute("data-v")===v));
+    });
+  }
+  function replay(){ renderNotis(); setView(view); }
+
+  // 알림 누름 → 종합 기사 (FR-04-3)
+  var opening=false;
+  $("screen").addEventListener("click",function(e){
+    if(dragMoved){ dragMoved=false; return; }
+    var n=e.target.closest("[data-open]"); if(!n||opening) return;
+    opening=true; $("opening").classList.add("show");
+    setTimeout(function(){ window.nbGo(TARGET); },280);
+  });
+
+  // 보기 전환 버튼 (목업 컨트롤 + 휴대폰 아래)
+  document.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-v]"); if(!b) return;
+    var v=b.getAttribute("data-v");
+    if(v==="replay") replay(); else setView(v);
+  });
+
+  // 끌기: 잠금화면 위쪽에서 아래로 → 알림 패널 / 패널을 위로 → 잠금화면
+  var scr=$("screen"), y0=null, dragMoved=false;
+  scr.addEventListener("pointerdown",function(e){
+    var r=scr.getBoundingClientRect(), z=parseFloat(getComputedStyle(document.querySelector(".phone-wrap")).zoom)||1;
+    y0={y:e.clientY,top:(e.clientY-r.top)<120*z || view==="panel"}; dragMoved=false;
+  });
+  scr.addEventListener("pointermove",function(e){
+    if(!y0) return; var d=e.clientY-y0.y;
+    if(Math.abs(d)>8) dragMoved=true;
+    if(view==="panel" && d<0){ var p=$("panel"); p.classList.add("dragging"); p.style.transform="translateY("+d+"px)"; }
+  });
+  function up(e){
+    if(!y0) return; var d=e.clientY-y0.y, wasTop=y0.top; y0=null;
+    var p=$("panel"); p.classList.remove("dragging");
+    if(view==="lock" && wasTop && d>60) setView("panel");
+    else if(view==="panel" && d<-60) setView("lock");
+    else p.style.transform="";
+  }
+  scr.addEventListener("pointerup",up); scr.addEventListener("pointercancel",function(){y0=null;});
+
+  var qv=new URLSearchParams(location.search).get("view");
+  renderNotis(); setView(qv==="panel"?"panel":"lock");
+})();
+</script>
+</body>
+</html>
